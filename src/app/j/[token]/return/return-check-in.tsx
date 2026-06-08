@@ -260,12 +260,12 @@ export function ReturnCheckInClient({
 
   if (bookingStatus === "returned") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <div className="text-center space-y-3">
           <Check className="h-10 w-10 mx-auto text-emerald-600" />
           <h1 className="text-xl font-semibold">Return Completed</h1>
           <p className="text-sm text-muted-foreground">
-            Return process completed
+            All items for {bookingEventName} have been checked in.
           </p>
         </div>
       </div>
@@ -274,7 +274,7 @@ export function ReturnCheckInClient({
 
   if (!nameEntered) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
         <form
           onSubmit={handleNameSubmit}
           className="w-full max-w-sm space-y-4"
@@ -300,7 +300,7 @@ export function ReturnCheckInClient({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted">
       <div className="sticky top-0 bg-background border-b p-4 space-y-2 z-10">
         <div className="flex items-center justify-between">
           <div>

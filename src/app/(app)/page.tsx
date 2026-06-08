@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth/config"
 import { getDashboardData } from "@/features/dashboard/queries"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
   Package,
@@ -9,9 +9,16 @@ import {
   Wrench,
   DollarSign,
   Calendar,
-  ArrowRight,
 } from "lucide-react"
-import Link from "next/link"
+
+const statusBadges: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  packed: "bg-indigo-100 text-indigo-700",
+  out: "bg-amber-100 text-amber-700",
+  returned: "bg-green-100 text-green-700",
+  cancelled: "bg-red-100 text-red-700",
+}
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -36,160 +43,103 @@ export default async function DashboardPage() {
   const needsAction = dashboardData?.needsAction ?? []
   const goingOutThisWeek = dashboardData?.goingOutThisWeek ?? []
 
-  const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    draft: "secondary",
-    confirmed: "default",
-    packed: "default",
-    out: "default",
-    returned: "secondary",
-    cancelled: "destructive",
-    damaged: "destructive",
-    missing: "destructive",
-    needs_inspection: "secondary",
-  }
-
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Equipment overview
+          Equipment overview at a glance
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard
-          label="Available"
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <CounterCard
+          title="Assets Available"
           value={counters.assetsAvailable}
           icon={Package}
-          color="emerald"
+          variant="green"
         />
-        <StatCard
-          label="Out"
+        <CounterCard
+          title="Currently Out"
           value={counters.assetsCurrentlyOut}
           icon={Truck}
-          color="blue"
+          variant="blue"
         />
-        <StatCard
-          label="Overdue"
+        <CounterCard
+          title="Overdue Returns"
           value={counters.overdueReturns}
           icon={AlertTriangle}
-          color="red"
+          variant="red"
         />
-        <StatCard
-          label="Damaged"
+        <CounterCard
+          title="Damaged / Missing"
           value={counters.damagedBlocked}
           icon={Wrench}
-          color="amber"
+          variant="amber"
         />
-        <StatCard
-          label="Due this week"
+        <CounterCard
+          title="Returns Due This Week"
           value={counters.returnsDueThisWeek}
           icon={Calendar}
-          color="purple"
+          variant="purple"
         />
-        <StatCard
-          label="Value at risk"
+        <CounterCard
+          title="Value At Risk"
           value={`$${counters.valueAtRisk.toLocaleString()}`}
           icon={DollarSign}
-          color="slate"
+          variant="slate"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <div className="flex items-center justify-between px-6 pt-5 pb-3">
-            <h2 className="text-sm font-semibold">Needs Action</h2>
-            <span className="text-xs text-muted-foreground">
-              {needsAction.length} items
-            </span>
-          </div>
-          <CardContent className="px-0 pb-0">
+          <CardHeader>
+            <CardTitle className="text-base">Needs Action</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {needsAction.length === 0 ? (
-              <div className="px-6 pb-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Nothing needs attention
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  All equipment is in order
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">Nothing needs attention</p>
             ) : (
-              <div className="divide-y">
-                {needsAction.slice(0, 8).map((item) => (
-                  <div
-                    key={`${item.status}-${item.id}`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">
-                        {item.eventName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {item.context}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={statusBadgeVariant[item.status] ?? "secondary"}
-                      className="ml-3 flex-shrink-0"
-                    >
-                      {item.status.replace(/_/g, " ")}
-                    </Badge>
+              needsAction.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{item.eventName}</p>
+                    <p className="text-xs text-muted-foreground">{item.context}</p>
                   </div>
-                ))}
-              </div>
+                  <Badge className={statusBadges[item.status] ?? ""}>
+                    {item.status}
+                  </Badge>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between px-6 pt-5 pb-3">
-            <h2 className="text-sm font-semibold">Going Out This Week</h2>
-            <Link
-              href="/bookings"
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              View all <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <CardContent className="px-0 pb-0">
+          <CardHeader>
+            <CardTitle className="text-base">Going Out This Week</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {goingOutThisWeek.length === 0 ? (
-              <div className="px-6 pb-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No bookings this week
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  <Link href="/bookings/new" className="text-primary hover:underline">
-                    Create a booking
-                  </Link>{" "}
-                  to get started
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">No bookings this week</p>
             ) : (
-              <div className="divide-y">
-                {goingOutThisWeek.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/bookings/${item.id}`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">
-                        {item.eventName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {item.context}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={statusBadgeVariant[item.status] ?? "secondary"}
-                      className="ml-3 flex-shrink-0"
-                    >
-                      {item.status.replace(/_/g, " ")}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
+              goingOutThisWeek.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{item.eventName}</p>
+                    <p className="text-xs text-muted-foreground">{item.context}</p>
+                  </div>
+                  <Badge className={statusBadges[item.status] ?? ""}>
+                    {item.status}
+                  </Badge>
+                </div>
+              ))
             )}
           </CardContent>
         </Card>
@@ -198,64 +148,34 @@ export default async function DashboardPage() {
   )
 }
 
-function StatCard({
-  label,
+function CounterCard({
+  title,
   value,
   icon: Icon,
-  color,
+  variant,
 }: {
-  label: string
+  title: string
   value: string | number
   icon: React.ComponentType<{ className?: string }>
-  color: "emerald" | "blue" | "red" | "amber" | "purple" | "slate"
+  variant: "green" | "blue" | "red" | "amber" | "purple" | "slate"
 }) {
-  const borderColors = {
-    emerald: "border-l-emerald-500",
-    blue: "border-l-blue-500",
-    red: "border-l-red-500",
-    amber: "border-l-amber-500",
-    purple: "border-l-violet-500",
-    slate: "border-l-slate-400",
-  }
-  const iconColors = {
-    emerald: "text-emerald-600",
-    blue: "text-blue-600",
-    red: "text-red-600",
-    amber: "text-amber-600",
-    purple: "text-violet-600",
-    slate: "text-slate-500",
-  }
-  const valueColors = {
-    emerald: "text-emerald-700",
-    blue: "text-blue-700",
-    red: "text-red-700",
-    amber: "text-amber-700",
-    purple: "text-violet-700",
-    slate: "text-slate-700",
-  }
-  const backgrounds = {
-    emerald: "bg-emerald-50/50",
-    blue: "bg-blue-50/40",
-    red: "bg-red-50/40",
-    amber: "bg-amber-50/40",
-    purple: "bg-violet-50/40",
-    slate: "bg-slate-50/50",
+  const colors = {
+    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    red: "bg-red-50 text-red-700 border-red-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    purple: "bg-purple-50 text-purple-700 border-purple-200",
+    slate: "bg-slate-50 text-slate-700 border-slate-200",
   }
 
   return (
-    <Card
-      className={`border-l-4 ${borderColors[color]} ${backgrounds[color]} hover:shadow-sm transition-shadow`}
-    >
+    <Card className={`border ${colors[variant]}`}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className={`text-2xl font-bold tracking-tight ${valueColors[color]}`}>
-              {value}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-          </div>
-          <Icon className={`h-4 w-4 ${iconColors[color]} mt-0.5`} />
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium">{title}</p>
+          <Icon className="h-4 w-4 opacity-70" />
         </div>
+        <p className="text-2xl font-bold mt-1">{value}</p>
       </CardContent>
     </Card>
   )
