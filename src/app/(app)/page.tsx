@@ -159,23 +159,34 @@ function CounterCard({
   icon: React.ComponentType<{ className?: string }>
   variant: "green" | "blue" | "red" | "amber" | "purple" | "slate"
 }) {
-  const colors = {
-    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    blue: "bg-blue-50 text-blue-700 border-blue-200",
-    red: "bg-red-50 text-red-700 border-red-200",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
-    purple: "bg-purple-50 text-purple-700 border-purple-200",
-    slate: "bg-slate-50 text-slate-700 border-slate-200",
+  const accent = {
+    green: "border-l-emerald-500 text-emerald-700",
+    blue: "border-l-blue-500 text-blue-700",
+    red: "border-l-red-500 text-red-700",
+    amber: "border-l-amber-500 text-amber-700",
+    purple: "border-l-purple-500 text-purple-700",
+    slate: "border-l-slate-400 text-slate-700",
+  }
+
+  const iconColor = {
+    green: "text-emerald-600/60",
+    blue: "text-blue-600/60",
+    red: "text-red-600/60",
+    amber: "text-amber-600/60",
+    purple: "text-purple-600/60",
+    slate: "text-slate-500/60",
   }
 
   return (
-    <Card className={`border ${colors[variant]}`}>
+    <Card className={`border-l-4 ${accent[variant]}`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">{title}</p>
-          <Icon className="h-4 w-4 opacity-70" />
+          <div>
+            <p className={`text-2xl font-bold ${accent[variant]}`}>{value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{title}</p>
+          </div>
+          <Icon className={`h-4 w-4 ${iconColor[variant]} mt-0.5`} />
         </div>
-        <p className="text-2xl font-bold mt-1">{value}</p>
       </CardContent>
     </Card>
   )
