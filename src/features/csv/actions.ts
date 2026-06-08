@@ -25,8 +25,26 @@ export async function importAssets(
     categoryMap.set(cat.name.toLowerCase(), cat.id)
   }
 
+  let imported = 0
+  let skipped = 0
+
   for (const row of rows) {
     const name = (row.name as string) ?? ""
+    if (!name.trim()) continue
+
+    const [existing] = await db
+      .select({ id: assets.id })
+      .from(assets)
+      .where(
+        and(eq(assets.name, name), eq(assets.tenantId, tenantId))
+      )
+      .limit(1)
+
+    if (existing) {
+      skipped++
+      continue
+    }
+
     const quantity = (row.quantity as number) ?? 1
     const isBulk = quantity > 1
     const qrToken = randomUUID()
@@ -66,9 +84,11 @@ export async function importAssets(
       quantity,
       performedBy: session.user.name ?? session.user.email ?? "import",
     })
+
+    imported++
   }
 
-  return { count: rows.length }
+  return { count: imported, skipped }
 }
 
 export async function importClients(

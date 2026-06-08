@@ -83,48 +83,50 @@ export async function confirmPackedItems(
 
   const processIds = itemsToProcess.map((item) => item.id)
 
-  await db
-    .update(bookingItems)
-    .set({
-      quantityPacked: bookingItems.quantityBooked,
-      quantityCheckedOut: bookingItems.quantityBooked,
-    })
-    .where(
-      and(
-        eq(bookingItems.bookingId, bookingId),
-        inArray(bookingItems.id, processIds)
-      )
-    )
-
-  for (const item of itemsToProcess) {
-    const assetStatus = item.assetStatus as AssetStatus
-    const newStatus: AssetStatus = "checked_out"
-
-    if (assetStatus !== "checked_out") {
-      await db
-        .update(assets)
-        .set({ status: newStatus, updatedAt: new Date() })
-        .where(eq(assets.id, item.assetId))
-
-      await db.insert(assetMovements).values({
-        tenantId: booking.tenantId,
-        assetId: item.assetId,
-        bookingId,
-        movementType: "checked_out" as MovementType,
-        fromStatus: assetStatus,
-        toStatus: newStatus,
-        quantity: item.quantityBooked,
-        performedBy,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(bookingItems)
+      .set({
+        quantityPacked: bookingItems.quantityBooked,
+        quantityCheckedOut: bookingItems.quantityBooked,
       })
-    }
-  }
+      .where(
+        and(
+          eq(bookingItems.bookingId, bookingId),
+          inArray(bookingItems.id, processIds)
+        )
+      )
 
-  if (booking.status === "confirmed" || booking.status === "packed") {
-    await db
-      .update(bookings)
-      .set({ status: "out", updatedAt: new Date() })
-      .where(eq(bookings.id, bookingId))
-  }
+    for (const item of itemsToProcess) {
+      const assetStatus = item.assetStatus as AssetStatus
+      const newStatus: AssetStatus = "checked_out"
+
+      if (assetStatus !== "checked_out") {
+        await tx
+          .update(assets)
+          .set({ status: newStatus, updatedAt: new Date() })
+          .where(eq(assets.id, item.assetId))
+
+        await tx.insert(assetMovements).values({
+          tenantId: booking.tenantId,
+          assetId: item.assetId,
+          bookingId,
+          movementType: "checked_out" as MovementType,
+          fromStatus: assetStatus,
+          toStatus: newStatus,
+          quantity: item.quantityBooked,
+          performedBy,
+        })
+      }
+    }
+
+    if (booking.status === "confirmed" || booking.status === "packed") {
+      await tx
+        .update(bookings)
+        .set({ status: "out", updatedAt: new Date() })
+        .where(eq(bookings.id, bookingId))
+    }
+  })
 
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath("/")
@@ -215,157 +217,159 @@ export async function completeReturnCheckIn(
     }
   }
 
-  for (const item of items) {
-    if (item.quantityReturned > 0 || item.quantityDamaged > 0 || item.quantityMissing > 0) {
-      continue
-    }
-
-    const state = itemStates[item.id]
-    const assetStatus = item.assetStatus as AssetStatus
-
-    if (state.state === "good") {
-      const newStatus: AssetStatus = "available"
-
-      await db
-        .update(bookingItems)
-        .set({ quantityReturned: item.quantityBooked })
-        .where(eq(bookingItems.id, item.id))
-
-      if (assetStatus !== "available") {
-        await db
-          .update(assets)
-          .set({ status: newStatus, updatedAt: new Date() })
-          .where(eq(assets.id, item.assetId))
-
-        await db.insert(assetMovements).values({
-          tenantId: booking.tenantId,
-          assetId: item.assetId,
-          bookingId,
-          movementType: "returned_good" as MovementType,
-          fromStatus: assetStatus,
-          toStatus: newStatus,
-          quantity: item.quantityBooked,
-          performedBy,
-        })
-      }
-    }
-
-    if (state.state === "missing") {
-      await db
-        .update(bookingItems)
-        .set({ quantityMissing: item.quantityBooked })
-        .where(eq(bookingItems.id, item.id))
-
-      if (assetStatus !== "missing") {
-        await db
-          .update(assets)
-          .set({ status: "missing" as AssetStatus, updatedAt: new Date() })
-          .where(eq(assets.id, item.assetId))
-
-        await db.insert(assetMovements).values({
-          tenantId: booking.tenantId,
-          assetId: item.assetId,
-          bookingId,
-          movementType: "returned_missing" as MovementType,
-          fromStatus: assetStatus,
-          toStatus: "missing" as AssetStatus,
-          quantity: item.quantityBooked,
-          performedBy,
-          notes: state.note ?? null,
-        })
-      }
-    }
-
-    if (state.state === "damaged") {
-      await db
-        .update(bookingItems)
-        .set({ quantityDamaged: item.quantityBooked })
-        .where(eq(bookingItems.id, item.id))
-
-      if (assetStatus !== "damaged") {
-        await db
-          .update(assets)
-          .set({ status: "damaged" as AssetStatus, updatedAt: new Date() })
-          .where(eq(assets.id, item.assetId))
-
-        await db.insert(assetMovements).values({
-          tenantId: booking.tenantId,
-          assetId: item.assetId,
-          bookingId,
-          movementType: "returned_damaged" as MovementType,
-          fromStatus: assetStatus,
-          toStatus: "damaged" as AssetStatus,
-          quantity: item.quantityBooked,
-          performedBy,
-          notes: state.note ?? null,
-        })
+  await db.transaction(async (tx) => {
+    for (const item of items) {
+      if (item.quantityReturned > 0 || item.quantityDamaged > 0 || item.quantityMissing > 0) {
+        continue
       }
 
-      const [existing] = await db
-        .select({ id: damageReports.id })
-        .from(damageReports)
-        .where(
-          and(
-            eq(damageReports.bookingId, bookingId),
-            eq(damageReports.assetId, item.assetId),
-            eq(damageReports.status, "pending")
-          )
-        )
-        .limit(1)
+      const state = itemStates[item.id]
+      const assetStatus = item.assetStatus as AssetStatus
 
-      if (!existing) {
-        await db.insert(damageReports).values({
-          tenantId: booking.tenantId,
-          assetId: item.assetId,
-          bookingId,
-          photoUrl: state.photoUrl ?? "",
-          description: state.note ?? null,
-          repairCost: state.repairCost != null ? String(state.repairCost) : null,
-          status: "pending",
-          reportedBy: performedBy,
-        })
-      }
-    }
+      if (state.state === "good") {
+        const newStatus: AssetStatus = "available"
 
-    if (state.state === "needs_inspection") {
-      await db
-        .update(bookingItems)
-        .set({ quantityReturned: item.quantityBooked })
-        .where(eq(bookingItems.id, item.id))
+        await tx
+          .update(bookingItems)
+          .set({ quantityReturned: item.quantityBooked })
+          .where(eq(bookingItems.id, item.id))
 
-      if (assetStatus !== "needs_inspection") {
-        await db
-          .update(assets)
-          .set({
-            status: "needs_inspection" as AssetStatus,
-            updatedAt: new Date(),
+        if (assetStatus !== "available") {
+          await tx
+            .update(assets)
+            .set({ status: newStatus, updatedAt: new Date() })
+            .where(eq(assets.id, item.assetId))
+
+          await tx.insert(assetMovements).values({
+            tenantId: booking.tenantId,
+            assetId: item.assetId,
+            bookingId,
+            movementType: "returned_good" as MovementType,
+            fromStatus: assetStatus,
+            toStatus: newStatus,
+            quantity: item.quantityBooked,
+            performedBy,
           })
-          .where(eq(assets.id, item.assetId))
+        }
+      }
 
-        await db.insert(assetMovements).values({
-          tenantId: booking.tenantId,
-          assetId: item.assetId,
-          bookingId,
-          movementType: "returned_needs_inspection" as MovementType,
-          fromStatus: assetStatus,
-          toStatus: "needs_inspection" as AssetStatus,
-          quantity: item.quantityBooked,
-          performedBy,
-          notes: state.note ?? null,
-        })
+      if (state.state === "missing") {
+        await tx
+          .update(bookingItems)
+          .set({ quantityMissing: item.quantityBooked })
+          .where(eq(bookingItems.id, item.id))
+
+        if (assetStatus !== "missing") {
+          await tx
+            .update(assets)
+            .set({ status: "missing" as AssetStatus, updatedAt: new Date() })
+            .where(eq(assets.id, item.assetId))
+
+          await tx.insert(assetMovements).values({
+            tenantId: booking.tenantId,
+            assetId: item.assetId,
+            bookingId,
+            movementType: "returned_missing" as MovementType,
+            fromStatus: assetStatus,
+            toStatus: "missing" as AssetStatus,
+            quantity: item.quantityBooked,
+            performedBy,
+            notes: state.note ?? null,
+          })
+        }
+      }
+
+      if (state.state === "damaged") {
+        await tx
+          .update(bookingItems)
+          .set({ quantityDamaged: item.quantityBooked })
+          .where(eq(bookingItems.id, item.id))
+
+        if (assetStatus !== "damaged") {
+          await tx
+            .update(assets)
+            .set({ status: "damaged" as AssetStatus, updatedAt: new Date() })
+            .where(eq(assets.id, item.assetId))
+
+          await tx.insert(assetMovements).values({
+            tenantId: booking.tenantId,
+            assetId: item.assetId,
+            bookingId,
+            movementType: "returned_damaged" as MovementType,
+            fromStatus: assetStatus,
+            toStatus: "damaged" as AssetStatus,
+            quantity: item.quantityBooked,
+            performedBy,
+            notes: state.note ?? null,
+          })
+        }
+
+        const [existing] = await tx
+          .select({ id: damageReports.id })
+          .from(damageReports)
+          .where(
+            and(
+              eq(damageReports.bookingId, bookingId),
+              eq(damageReports.assetId, item.assetId),
+              eq(damageReports.status, "pending")
+            )
+          )
+          .limit(1)
+
+        if (!existing) {
+          await tx.insert(damageReports).values({
+            tenantId: booking.tenantId,
+            assetId: item.assetId,
+            bookingId,
+            photoUrl: state.photoUrl ?? "",
+            description: state.note ?? null,
+            repairCost: state.repairCost != null ? String(state.repairCost) : null,
+            status: "pending",
+            reportedBy: performedBy,
+          })
+        }
+      }
+
+      if (state.state === "needs_inspection") {
+        await tx
+          .update(bookingItems)
+          .set({ quantityReturned: item.quantityBooked })
+          .where(eq(bookingItems.id, item.id))
+
+        if (assetStatus !== "needs_inspection") {
+          await tx
+            .update(assets)
+            .set({
+              status: "needs_inspection" as AssetStatus,
+              updatedAt: new Date(),
+            })
+            .where(eq(assets.id, item.assetId))
+
+          await tx.insert(assetMovements).values({
+            tenantId: booking.tenantId,
+            assetId: item.assetId,
+            bookingId,
+            movementType: "returned_needs_inspection" as MovementType,
+            fromStatus: assetStatus,
+            toStatus: "needs_inspection" as AssetStatus,
+            quantity: item.quantityBooked,
+            performedBy,
+            notes: state.note ?? null,
+          })
+        }
       }
     }
-  }
 
-  await db
-    .update(bookings)
-    .set({ status: "returned", updatedAt: new Date() })
-    .where(eq(bookings.id, bookingId))
+    await tx
+      .update(bookings)
+      .set({ status: "returned", updatedAt: new Date() })
+      .where(eq(bookings.id, bookingId))
 
-  await db
-    .update(bookingLinks)
-    .set({ usedBy: performedBy })
-    .where(eq(bookingLinks.id, link.id))
+    await tx
+      .update(bookingLinks)
+      .set({ usedBy: performedBy })
+      .where(eq(bookingLinks.id, link.id))
+  })
 
   revalidatePath(`/bookings/${bookingId}`)
   revalidatePath("/")

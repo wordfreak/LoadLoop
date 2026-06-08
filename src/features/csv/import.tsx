@@ -122,6 +122,7 @@ export function CsvImport() {
   const [mapping, setMapping] = useState<ColumnMapping>({})
   const [importing, setImporting] = useState(false)
   const [count, setCount] = useState(0)
+  const [skipped, setSkipped] = useState(0)
   const [filename, setFilename] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -207,8 +208,11 @@ export function CsvImport() {
     try {
       const result = await importAssets(mappedRows)
       setCount(result.count)
+      setSkipped(result.skipped ?? 0)
       setStep("done")
-      toast.success(`Imported ${result.count} items`)
+      const msg = `Imported ${result.count} items`
+      const suffix = result.skipped ? ` (${result.skipped} duplicates skipped)` : ""
+      toast.success(msg + suffix)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Import failed"
@@ -230,6 +234,7 @@ export function CsvImport() {
             <div>
               <p className="text-sm font-medium">
                 {count} items imported from {filename}
+                {skipped > 0 && <span className="text-amber-700"> ({skipped} duplicates skipped)</span>}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Items are now in your asset register. QR codes generated automatically.

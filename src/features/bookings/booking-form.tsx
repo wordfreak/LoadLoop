@@ -128,7 +128,7 @@ export function NewBookingForm({
     }
   }
 
-  const filteredAssets = assets.filter((a) => !a.isBulk)
+  const availableAssets = assets
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -279,7 +279,7 @@ export function NewBookingForm({
             )}
 
             <div className="max-h-64 overflow-y-auto space-y-1">
-              {filteredAssets.map((asset) => (
+              {availableAssets.map((asset) => (
                 <button
                   key={asset.id}
                   type="button"

@@ -15,6 +15,10 @@ type ItemProps = {
   assetId: number
   assetName: string
   quantityBooked: number
+  quantityReturned: number
+  quantityDamaged: number
+  quantityMissing: number
+  isHighValue: boolean
 }
 
 type ItemStateDetail = {
@@ -52,7 +56,15 @@ export function ReturnCheckInClient({
   const [itemStates, setItemStates] = useState<ItemStates>(() => {
     const initial: ItemStates = {}
     for (const item of items) {
-      initial[item.id] = { state: "unchecked" }
+      if (item.quantityReturned >= item.quantityBooked) {
+        initial[item.id] = { state: "good" }
+      } else if (item.quantityDamaged > 0) {
+        initial[item.id] = { state: "damaged" }
+      } else if (item.quantityMissing > 0) {
+        initial[item.id] = { state: "missing" }
+      } else {
+        initial[item.id] = { state: "unchecked" }
+      }
     }
     return initial
   })
@@ -244,6 +256,20 @@ export function ReturnCheckInClient({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (bookingStatus === "returned") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+        <div className="text-center space-y-3">
+          <Check className="h-10 w-10 mx-auto text-emerald-600" />
+          <h1 className="text-xl font-semibold">Return Completed</h1>
+          <p className="text-sm text-muted-foreground">
+            All items for {bookingEventName} have been checked in.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (!nameEntered) {

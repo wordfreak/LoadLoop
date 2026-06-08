@@ -17,6 +17,10 @@ export default async function ReturnPage({
     assetId: item.assetId,
     assetName: item.assetName,
     quantityBooked: item.quantityBooked,
+    quantityReturned: item.quantityReturned,
+    quantityDamaged: item.quantityDamaged,
+    quantityMissing: item.quantityMissing,
+    isHighValue: item.isHighValue,
   }))
 
   return (

@@ -1,6 +1,6 @@
-import { sql, eq, and, or, lt, gte, lte, ne, desc } from "drizzle-orm"
+import { sql, eq, and, or, lt, gt, gte, lte, ne, desc } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
-import { assets, bookings, damageReports } from "@/lib/db/schema"
+import { assets, bookings, damageReports, bookingItems } from "@/lib/db/schema"
 
 export type DashboardCounters = {
   assetsAvailable: number
@@ -136,6 +136,28 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
     )
     .limit(5)
 
+  const itemIssues = await db
+    .select({
+      id: bookingItems.id,
+      assetName: assets.name,
+      bookingName: bookings.eventName,
+      quantityDamaged: bookingItems.quantityDamaged,
+      quantityMissing: bookingItems.quantityMissing,
+    })
+    .from(bookingItems)
+    .innerJoin(assets, eq(assets.id, bookingItems.assetId))
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .where(
+      and(
+        eq(bookings.tenantId, tenantId),
+        or(
+          gt(bookingItems.quantityDamaged, 0),
+          gt(bookingItems.quantityMissing, 0)
+        )
+      )
+    )
+    .limit(5)
+
   const goingOutRows = await db
     .select({
       id: bookings.id,
@@ -197,6 +219,16 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
           row.status === "missing"
             ? "Missing — needs investigation"
             : "Needs inspection",
+      })),
+      ...itemIssues.map((row) => ({
+        id: row.id,
+        eventName: row.assetName,
+        status: row.quantityDamaged > 0 ? "damaged" : "missing",
+        startDate: new Date().toISOString().split("T")[0],
+        returnDate: null,
+        context: row.quantityDamaged > 0
+          ? `${row.quantityDamaged} damaged in ${row.bookingName}`
+          : `${row.quantityMissing} missing from ${row.bookingName}`,
       })),
     ],
     goingOutThisWeek: goingOutRows.map((row) => ({

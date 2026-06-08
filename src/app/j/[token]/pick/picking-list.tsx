@@ -17,6 +17,7 @@ type ItemProps = {
   assetQrToken: string | null
   quantityBooked: number
   quantityPacked: number
+  quantityCheckedOut: number
   isHighValue: boolean
 }
 
@@ -26,12 +27,14 @@ export function PickingListClient({
   bookingStatus,
   clientName,
   items,
+  alreadyDispatched,
 }: {
   token: string
   bookingEventName: string
   bookingStatus: string
   clientName: string | null
   items: ItemProps[]
+  alreadyDispatched: boolean
 }) {
   const [staffName, setStaffName] = useState(() => {
     if (typeof window !== "undefined") {
@@ -45,7 +48,15 @@ export function PickingListClient({
     }
     return false
   })
-  const [packedItems, setPackedItems] = useState<Set<number>>(new Set())
+  const [packedItems, setPackedItems] = useState<Set<number>>(() => {
+    const initial = new Set<number>()
+    for (const item of items) {
+      if (item.quantityCheckedOut >= item.quantityBooked) {
+        initial.add(item.id)
+      }
+    }
+    return initial
+  })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
@@ -87,6 +98,20 @@ export function PickingListClient({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (alreadyDispatched) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+        <div className="text-center space-y-3">
+          <Check className="h-10 w-10 mx-auto text-emerald-600" />
+          <h1 className="text-xl font-semibold">Already Dispatched</h1>
+          <p className="text-sm text-muted-foreground">
+            {bookingEventName} has already been packed and dispatched.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (!nameEntered) {

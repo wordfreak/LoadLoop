@@ -20,8 +20,11 @@ export default async function PickPage({
     assetQrToken: item.assetQrToken,
     quantityBooked: item.quantityBooked,
     quantityPacked: item.quantityPacked,
+    quantityCheckedOut: item.quantityCheckedOut,
     isHighValue: item.isHighValue,
   }))
+
+  const alreadyDispatched = data.booking.status === "out"
 
   return (
     <PickingListClient
@@ -30,6 +33,7 @@ export default async function PickPage({
       bookingStatus={data.booking.status}
       clientName={data.client?.name ?? null}
       items={sanitizedItems}
+      alreadyDispatched={alreadyDispatched}
     />
   )
 }
