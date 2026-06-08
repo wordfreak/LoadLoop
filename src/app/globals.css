@@ -77,7 +77,7 @@
 }
 
 :root {
-  --background: hsl(0 0% 100%);
+  --background: hsl(240 10% 97%);
   --foreground: hsl(222 47% 11%);
   --card: hsl(0 0% 100%);
   --card-foreground: hsl(222 47% 11%);
@@ -102,14 +102,14 @@
   --chart-4: hsl(0 72% 51%);
   --chart-5: hsl(262 83% 58%);
   --radius: 0.5rem;
-  --sidebar: hsl(0 0% 100%);
-  --sidebar-foreground: hsl(222 47% 11%);
-  --sidebar-primary: hsl(217 91% 45%);
+  --sidebar: hsl(222 47% 6%);
+  --sidebar-foreground: hsl(210 40% 94%);
+  --sidebar-primary: hsl(217 91% 55%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(210 40% 96%);
-  --sidebar-accent-foreground: hsl(222 47% 11%);
-  --sidebar-border: hsl(214 32% 91%);
-  --sidebar-ring: hsl(217 91% 45%);
+  --sidebar-accent: hsl(222 47% 14%);
+  --sidebar-accent-foreground: hsl(210 40% 94%);
+  --sidebar-border: hsl(222 47% 12%);
+  --sidebar-ring: hsl(217 91% 55%);
 }
 
 @layer base {
