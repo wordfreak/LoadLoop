@@ -21,7 +21,7 @@ export default async function ReturnPage({
 
   return (
     <ReturnCheckInClient
-      bookingId={data.booking.id}
+      token={token}
       bookingEventName={data.booking.eventName}
       bookingStatus={data.booking.status}
       items={sanitizedItems}

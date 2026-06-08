@@ -25,7 +25,7 @@ export default async function PickPage({
 
   return (
     <PickingListClient
-      bookingId={data.booking.id}
+      token={token}
       bookingEventName={data.booking.eventName}
       bookingStatus={data.booking.status}
       clientName={data.client?.name ?? null}

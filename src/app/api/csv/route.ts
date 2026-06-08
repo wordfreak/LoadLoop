@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
-import { assets, bookings, clients, damageReports, bookingItems } from "@/lib/db/schema"
+import { assets, bookings, clients } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 
 export async function GET(request: Request) {

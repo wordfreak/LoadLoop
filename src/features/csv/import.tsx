@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { importAssets } from "@/features/csv/actions"
 import { toast } from "sonner"
-import { Upload, FileSpreadsheet, Check } from "lucide-react"
+import { Upload, Check } from "lucide-react"
 
 type ColumnMapping = Record<string, string>
 
@@ -195,32 +195,45 @@ export function CsvImport() {
 
     setImporting(true)
 
-    const mappedRows = allRows.map((row): Record<string, unknown> => {
-      const obj: Record<string, unknown> = { name: "" }
-      for (const def of COLUMN_DEFINITIONS) {
-        const csvColumn = mapping[def.key]
-        if (!csvColumn) continue
+    const mappedRows = allRows
+      .map((row): Record<string, unknown> => {
+        const obj: Record<string, unknown> = { name: "" }
+        for (const def of COLUMN_DEFINITIONS) {
+          const csvColumn = mapping[def.key]
+          if (!csvColumn) continue
 
-        const colIdx = headers.indexOf(csvColumn)
-        if (colIdx < 0) continue
+          const colIdx = headers.indexOf(csvColumn)
+          if (colIdx < 0) continue
 
-        const rawValue = row[colIdx]?.trim()
-        if (!rawValue) continue
+          const rawValue = row[colIdx]?.trim()
+          if (!rawValue) continue
 
-        if (def.key === "value") {
-          const cleaned = rawValue.replace(/[$,£€]/g, "").trim()
-          const num = parseFloat(cleaned)
-          if (!isNaN(num)) obj[def.key] = num
-        } else if (def.key === "quantity") {
-          const num = parseInt(rawValue, 10)
-          obj[def.key] = isNaN(num) ? 1 : Math.max(1, num)
-        } else {
-          obj[def.key] = rawValue
+          if (def.key === "value") {
+            const cleaned = rawValue.replace(/[$,£€]/g, "").trim()
+            const num = parseFloat(cleaned)
+            if (!isNaN(num)) obj[def.key] = num
+          } else if (def.key === "quantity") {
+            const num = parseInt(rawValue, 10)
+            obj[def.key] = isNaN(num) ? 1 : Math.max(1, num)
+          } else if (def.key === "name") {
+            obj[def.key] = rawValue
+          } else {
+            obj[def.key] = rawValue
+          }
         }
-      }
 
-      return obj
-    })
+        return obj
+      })
+      .filter((row) => {
+        const name = row.name as string
+        return name && name.trim().length > 0
+      })
+
+    if (mappedRows.length === 0) {
+      toast.error("No valid rows found with an Equipment Name")
+      setImporting(false)
+      return
+    }
 
     try {
       const result = await importAssets(mappedRows)
@@ -384,8 +397,8 @@ export function CsvImport() {
           system automatically detects columns and imports everything at once.
         </p>
         <p className="text-xs text-muted-foreground">
-          Auto-detects column names like "Equipment", "Serial #", "Replacement
-          Value", "Qty", etc. No manual setup needed.
+          Auto-detects column names like Equipment, Serial #, Replacement
+          Value, Qty, and more. No manual setup needed.
         </p>
         <div
           className="rounded-lg border-2 border-dashed p-10 text-center cursor-pointer hover:bg-muted/50 transition-colors"

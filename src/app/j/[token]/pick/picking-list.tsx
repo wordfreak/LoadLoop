@@ -21,13 +21,13 @@ type ItemProps = {
 }
 
 export function PickingListClient({
-  bookingId,
+  token,
   bookingEventName,
   bookingStatus,
   clientName,
   items,
 }: {
-  bookingId: number
+  token: string
   bookingEventName: string
   bookingStatus: string
   clientName: string | null
@@ -74,7 +74,7 @@ export function PickingListClient({
     setSubmitting(true)
     try {
       await confirmPackedItems(
-        bookingId,
+        token,
         Array.from(packedItems),
         staffName
       )

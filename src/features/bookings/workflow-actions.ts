@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { eq, and, inArray } from "drizzle-orm"
+import { eq, and, inArray, gt } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import {
   bookingItems,
@@ -9,15 +9,39 @@ import {
   assets,
   assetMovements,
   damageReports,
+  bookingLinks,
 } from "@/lib/db/schema"
 import type { AssetStatus, MovementType } from "@/features/assets/statuses"
 
+async function validateStaffToken(
+  token: string,
+  expectedType: "pick" | "return"
+) {
+  const db = getDatabase()
+  const [link] = await db
+    .select()
+    .from(bookingLinks)
+    .where(
+      and(
+        eq(bookingLinks.token, token),
+        eq(bookingLinks.linkType, expectedType),
+        gt(bookingLinks.expiresAt, new Date())
+      )
+    )
+    .limit(1)
+
+  if (!link) throw new Error("Invalid or expired link")
+  return link
+}
+
 export async function confirmPackedItems(
-  bookingId: number,
+  token: string,
   confirmedItemIds: number[],
   performedBy: string
 ) {
+  const link = await validateStaffToken(token, "pick")
   const db = getDatabase()
+  const bookingId = link.bookingId
 
   const [booking] = await db
     .select()
@@ -51,11 +75,16 @@ export async function confirmPackedItems(
     })
     .from(bookingItems)
     .innerJoin(assets, eq(assets.id, bookingItems.assetId))
-    .where(eq(bookingItems.bookingId, bookingId))
+    .where(
+      and(
+        eq(bookingItems.bookingId, bookingId),
+        inArray(bookingItems.id, confirmedItemIds)
+      )
+    )
 
   for (const item of items) {
     const assetStatus = item.assetStatus as AssetStatus
-    const newStatus: AssetStatus = "packed"
+    const newStatus: AssetStatus = "checked_out"
 
     await db
       .update(assets)
@@ -66,7 +95,7 @@ export async function confirmPackedItems(
       tenantId: booking.tenantId,
       assetId: item.assetId,
       bookingId,
-      movementType: "packed" as MovementType,
+      movementType: "checked_out" as MovementType,
       fromStatus: assetStatus,
       toStatus: newStatus,
       quantity: item.quantityBooked,
@@ -74,10 +103,10 @@ export async function confirmPackedItems(
     })
   }
 
-  if (booking.status === "confirmed") {
+  if (booking.status === "confirmed" || booking.status === "packed") {
     await db
       .update(bookings)
-      .set({ status: "packed", updatedAt: new Date() })
+      .set({ status: "out", updatedAt: new Date() })
       .where(eq(bookings.id, bookingId))
   }
 
@@ -86,14 +115,16 @@ export async function confirmPackedItems(
 }
 
 export async function completeReturnCheckIn(
-  bookingId: number,
+  token: string,
   itemStates: Record<
     number,
-    { state: "good" | "damaged" | "missing" | "needs_inspection"; note?: string }
+    { state: "good" | "damaged" | "missing" | "needs_inspection"; note?: string; photoUrl?: string }
   >,
   performedBy: string
 ) {
+  const link = await validateStaffToken(token, "return")
   const db = getDatabase()
+  const bookingId = link.bookingId
 
   const [booking] = await db
     .select()
@@ -196,7 +227,7 @@ export async function completeReturnCheckIn(
         tenantId: booking.tenantId,
         assetId: item.assetId,
         bookingId,
-        photoUrl: "",
+        photoUrl: state.photoUrl ?? "",
         description: state.note ?? null,
         status: "pending",
         reportedBy: performedBy,
