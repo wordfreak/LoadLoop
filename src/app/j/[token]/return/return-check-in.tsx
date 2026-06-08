@@ -96,19 +96,18 @@ export function ReturnCheckInClient({
   async function handlePhotoUpload(file: File) {
     setPhotoUploading(true)
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload", { method: "POST", body: formData })
-      const result = await response.json()
-
-      if (!response.ok) throw new Error(result.error ?? "Upload failed")
-      setDamagePhotoUrl(result.url)
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to upload photo"
-      )
-    } finally {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setDamagePhotoUrl(reader.result as string)
+        setPhotoUploading(false)
+      }
+      reader.onerror = () => {
+        toast.error("Failed to read photo")
+        setPhotoUploading(false)
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      toast.error("Failed to process photo")
       setPhotoUploading(false)
     }
   }
