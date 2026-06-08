@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { generateBookingLinks } from "@/features/bookings/links"
 import { CopyLinkButton } from "./copy-link-button"
+import { OwnerActions } from "./owner-actions"
 
 const bookingStatusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -176,6 +177,11 @@ export default async function BookingDetailPage({
           />
         )}
       </div>
+
+      <OwnerActions
+        bookingId={booking.id}
+        bookingStatus={booking.status}
+      />
 
       <Card className="mt-6">
         <CardHeader>

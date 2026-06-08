@@ -4,16 +4,11 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Check,
-  AlertTriangle,
-  X,
-  HelpCircle,
-} from "lucide-react"
+import { Check } from "lucide-react"
 import { completeReturnCheckIn } from "@/features/bookings/workflow-actions"
 import { toast } from "sonner"
 import { DamageForm } from "./damage-form"
+import { ReturnItemCard } from "./return-item-card"
 
 type ItemProps = {
   id: number
@@ -311,144 +306,17 @@ export function ReturnCheckInClient({
           />
         )}
 
-        {items.map((item) => {
-          const itemState = itemStates[item.id]
-          const isUnchecked = !itemState || itemState.state === "unchecked"
-          const isGood = itemState.state === "good"
-
-          if (isUnchecked) {
-            return (
-              <Card key={item.id}>
-                <CardContent className="p-3">
-                  <p className="text-sm font-medium mb-3">{item.assetName}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                      onClick={() => setItemState(item.id, "good")}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Good
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-11 border-amber-200 text-amber-700 hover:bg-amber-50"
-                      onClick={() => setItemState(item.id, "damaged")}
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-1" />
-                      Damaged
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-11 border-red-200 text-red-700 hover:bg-red-50"
-                      onClick={() => setItemState(item.id, "missing")}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Missing
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-11 border-gray-200 text-gray-600 hover:bg-gray-50"
-                      onClick={() => setItemState(item.id, "needs_inspection")}
-                    >
-                      <HelpCircle className="h-4 w-4 mr-1" />
-                      Inspect
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          }
-
-          return (
-            <Card key={item.id}>
-              <CardContent className="p-3">
-                <p className="text-sm font-medium mb-3">
-                  {item.assetName}
-                  {itemState.state !== "good" &&
-                    itemState.state !== "needs_inspection" && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {itemState.state === "damaged" &&
-                          (itemState.note
-                            ? `— ${itemState.note.slice(0, 40)}${itemState.note.length > 40 ? "..." : ""}`
-                            : "— needs details")}
-                        {itemState.state === "missing" &&
-                          (itemState.note
-                            ? `— ${itemState.note.slice(0, 40)}${itemState.note.length > 40 ? "..." : ""}`
-                            : "— needs details")}
-                      </span>
-                    )}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={isGood ? "default" : "outline"}
-                    size="sm"
-                    className={`h-11 ${
-                      isGood
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                        : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                    }`}
-                    onClick={() => setItemState(item.id, "good")}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Good
-                  </Button>
-                  <Button
-                    variant={
-                      itemState.state === "damaged" ? "default" : "outline"
-                    }
-                    size="sm"
-                    className={`h-11 ${
-                      itemState.state === "damaged"
-                        ? "bg-amber-600 hover:bg-amber-700 text-white"
-                        : "border-amber-200 text-amber-700 hover:bg-amber-50"
-                    }`}
-                    onClick={() => setItemState(item.id, "damaged")}
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-1" />
-                    Damaged
-                  </Button>
-                  <Button
-                    variant={
-                      itemState.state === "missing" ? "default" : "outline"
-                    }
-                    size="sm"
-                    className={`h-11 ${
-                      itemState.state === "missing"
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : "border-red-200 text-red-700 hover:bg-red-50"
-                    }`}
-                    onClick={() => setItemState(item.id, "missing")}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Missing
-                  </Button>
-                  <Button
-                    variant={
-                      itemState.state === "needs_inspection"
-                        ? "default"
-                        : "outline"
-                    }
-                    size="sm"
-                    className={`h-11 ${
-                      itemState.state === "needs_inspection"
-                        ? "bg-gray-600 hover:bg-gray-700 text-white"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }`}
-                    onClick={() => setItemState(item.id, "needs_inspection")}
-                  >
-                    <HelpCircle className="h-4 w-4 mr-1" />
-                    Inspect
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+        {items.map((item) => (
+          <ReturnItemCard
+            key={item.id}
+            itemId={item.id}
+            assetName={item.assetName}
+            itemState={
+              itemStates[item.id] ?? { state: "unchecked" }
+            }
+            onSetState={setItemState}
+          />
+        ))}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
