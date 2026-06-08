@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { assets, categories, locations, assetMovements } from "@/lib/db/schema"
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, and, inArray } from "drizzle-orm"
 import AssetTable from "@/features/assets/table"
 import type { AssetRow } from "@/features/assets/table"
 
@@ -12,7 +12,6 @@ export default async function AssetsPage() {
   const db = getDatabase()
 
   let assetRows: AssetRow[] = []
-  let categoryNames: string[] = []
 
   try {
     const assetList = await db
@@ -43,8 +42,10 @@ export default async function AssetsPage() {
             })
             .from(assetMovements)
             .where(
-              eq(assetMovements.tenantId, session.user.tenantId)
-              // Note: in() with empty array causes SQL error, handled above
+              and(
+                eq(assetMovements.tenantId, session.user.tenantId),
+                inArray(assetMovements.assetId, assetIds)
+              )
             )
         : []
 
@@ -68,9 +69,6 @@ export default async function AssetsPage() {
       lastMovement: lastMovementMap.get(a.id) ?? "-",
     }))
 
-    categoryNames = [
-      ...new Set(assetList.map((a) => a.categoryName).filter(Boolean)),
-    ] as string[]
   } catch {
     assetRows = []
   }
@@ -83,7 +81,7 @@ export default async function AssetsPage() {
           {assetRows.length} items in your equipment register
         </p>
       </div>
-      <AssetTable data={assetRows} categories={categoryNames} />
+      <AssetTable data={assetRows} />
     </div>
   )
 }

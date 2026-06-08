@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { bookings, bookingItems, assets, clients } from "@/lib/db/schema"
-import { eq, and, or, lte, gte, not, ne } from "drizzle-orm"
+import { eq, and, inArray, lte, gte, not, ne } from "drizzle-orm"
 import { createBookingSchema, createClientSchema, updateClientSchema } from "./schemas"
 
 type BookingConflict = {
@@ -20,53 +20,49 @@ export async function detectBookingConflicts(
   assetIds: number[],
   startDate: string,
   endDate: string,
+  tenantId: number,
   excludeBookingId?: number
 ): Promise<BookingConflict[]> {
   const db = getDatabase()
-  const conflicts: BookingConflict[] = []
 
-  for (const assetId of assetIds) {
-    const conditions = [
-      eq(bookingItems.assetId, assetId),
-      eq(assets.isBulk, false),
-      gte(bookings.endDate, startDate),
-      lte(bookings.startDate, endDate),
-      not(eq(bookings.status, "cancelled")),
-      not(eq(bookings.status, "returned")),
-    ]
+  if (assetIds.length === 0) return []
 
-    if (excludeBookingId) {
-      conditions.push(ne(bookings.id, excludeBookingId))
-    }
+  const conditions = [
+    inArray(bookingItems.assetId, assetIds),
+    eq(assets.isBulk, false),
+    eq(bookings.tenantId, tenantId),
+    gte(bookings.endDate, startDate),
+    lte(bookings.startDate, endDate),
+    not(eq(bookings.status, "cancelled")),
+    not(eq(bookings.status, "returned")),
+  ]
 
-    const rows = await db
-      .select({
-        assetId: assets.id,
-        assetName: assets.name,
-        bookingId: bookings.id,
-        eventName: bookings.eventName,
-        startDate: bookings.startDate,
-        endDate: bookings.endDate,
-      })
-      .from(bookingItems)
-      .innerJoin(assets, eq(assets.id, bookingItems.assetId))
-      .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
-      .where(and(...conditions))
-      .limit(1)
-
-    if (rows.length > 0) {
-      conflicts.push({
-        assetId: rows[0].assetId,
-        assetName: rows[0].assetName,
-        conflictBookingId: rows[0].bookingId,
-        conflictEventName: rows[0].eventName,
-        conflictStartDate: rows[0].startDate,
-        conflictEndDate: rows[0].endDate,
-      })
-    }
+  if (excludeBookingId) {
+    conditions.push(ne(bookings.id, excludeBookingId))
   }
 
-  return conflicts
+  const rows = await db
+    .select({
+      assetId: assets.id,
+      assetName: assets.name,
+      bookingId: bookings.id,
+      eventName: bookings.eventName,
+      startDate: bookings.startDate,
+      endDate: bookings.endDate,
+    })
+    .from(bookingItems)
+    .innerJoin(assets, eq(assets.id, bookingItems.assetId))
+    .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+    .where(and(...conditions))
+
+  return rows.map((row) => ({
+    assetId: row.assetId,
+    assetName: row.assetName,
+    conflictBookingId: row.bookingId,
+    conflictEventName: row.eventName,
+    conflictStartDate: row.startDate,
+    conflictEndDate: row.endDate,
+  }))
 }
 
 export async function createBooking(input: FormData | Record<string, unknown>) {
@@ -76,11 +72,38 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
   const raw = input instanceof FormData ? Object.fromEntries(input) : input
   const parsed = createBookingSchema.parse(raw)
   const db = getDatabase()
+  const tenantId = session.user.tenantId
+
+  const [client] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(and(eq(clients.id, parsed.clientId), eq(clients.tenantId, tenantId)))
+    .limit(1)
+
+  if (!client) throw new Error("Client not found")
+
+  if (parsed.items.length > 0) {
+    const assetIds = parsed.items.map((i) => i.assetId)
+    const tenantAssets = await db
+      .select({ id: assets.id })
+      .from(assets)
+      .where(
+        and(inArray(assets.id, assetIds), eq(assets.tenantId, tenantId))
+      )
+
+    const tenantAssetIds = new Set(tenantAssets.map((a) => a.id))
+    for (const item of parsed.items) {
+      if (!tenantAssetIds.has(item.assetId)) {
+        throw new Error(`Asset ${item.assetId} does not belong to your company`)
+      }
+    }
+  }
 
   const conflicts = await detectBookingConflicts(
     parsed.items.map((i) => i.assetId),
     parsed.startDate,
-    parsed.endDate
+    parsed.endDate,
+    tenantId
   )
 
   if (conflicts.length > 0) {

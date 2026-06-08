@@ -12,8 +12,6 @@ import { eq, and } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { generateBookingLinks } from "@/features/bookings/links"
 import { CopyLinkButton } from "./copy-link-button"
 
@@ -91,9 +89,7 @@ export default async function BookingDetailPage({
       )
       pickLink = pickLink ?? generated.pickLink
       returnLink = returnLink ?? generated.returnLink
-    } catch {
-      // Links generation can fail if booking doesn't have dates
-    }
+    } catch {}
   }
 
   const bookingDamages = await db
@@ -171,9 +167,7 @@ export default async function BookingDetailPage({
         )}
       </div>
 
-      <Separator />
-
-      <Card>
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle className="text-base">Asset List</CardTitle>
         </CardHeader>

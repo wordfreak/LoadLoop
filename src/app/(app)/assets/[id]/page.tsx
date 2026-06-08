@@ -12,7 +12,6 @@ import {
 import { eq, and, desc } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { notFound } from "next/navigation"
 
 const statusColors: Record<string, string> = {

@@ -1,6 +1,6 @@
 import { sql, eq, and, or, lt, gte, lte, ne, desc } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
-import { assets, bookings, bookingItems, damageReports } from "@/lib/db/schema"
+import { assets, bookings } from "@/lib/db/schema"
 
 export type DashboardCounters = {
   assetsAvailable: number

@@ -128,10 +128,8 @@ const columns: ColumnDef<AssetRow>[] = [
 
 export default function AssetTable({
   data,
-  categories,
 }: {
   data: AssetRow[]
-  categories: string[]
 }) {
   const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])

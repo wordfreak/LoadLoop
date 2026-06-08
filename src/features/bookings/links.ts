@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto"
-import { eq, and, gt } from "drizzle-orm"
+import { eq, and, gt, sql } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import {
   bookingLinks,
@@ -83,9 +83,8 @@ export async function getBookingForLink(token: string) {
       assetName: assets.name,
       assetPhotoUrl: assets.photoUrl,
       assetQrToken: assets.qrToken,
-      assetStatus: assets.status,
-      assetValue: assets.value,
       assetIsBulk: assets.isBulk,
+      isHighValue: sql<boolean>`COALESCE(${assets.value}::numeric > 150, false)`,
     })
     .from(bookingItems)
     .innerJoin(assets, eq(assets.id, bookingItems.assetId))

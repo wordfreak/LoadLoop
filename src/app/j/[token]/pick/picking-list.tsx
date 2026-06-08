@@ -1,86 +1,63 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getBookingForLink } from "@/features/bookings/links"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Check, Package } from "lucide-react"
+import { confirmPackedItems } from "@/features/bookings/workflow-actions"
+import { toast } from "sonner"
 
-type BookingLinkData = NonNullable<
-  Awaited<ReturnType<typeof getBookingForLink>>
->
+type ItemProps = {
+  id: number
+  assetId: number
+  assetName: string
+  assetPhotoUrl: string | null
+  assetQrToken: string | null
+  quantityBooked: number
+  quantityPacked: number
+  isHighValue: boolean
+}
 
-export function PickingList({ token }: { token: string }) {
-  const [data, setData] = useState<BookingLinkData | null>(null)
-  const [error, setError] = useState("")
-  const [staffName, setStaffName] = useState("")
+export function PickingListClient({
+  bookingId,
+  bookingEventName,
+  bookingStatus,
+  clientName,
+  items,
+}: {
+  bookingId: number
+  bookingEventName: string
+  bookingStatus: string
+  clientName: string | null
+  items: ItemProps[]
+}) {
+  const [staffName, setStaffName] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("staff_name") ?? ""
+    }
+    return ""
+  })
+  const [nameEntered, setNameEntered] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("staff_name")
+    }
+    return false
+  })
   const [packedItems, setPackedItems] = useState<Set<number>>(new Set())
-  const [nameEntered, setNameEntered] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const result = await getBookingForLink(token)
-        if (!result) {
-          setError("Invalid or expired link")
-          return
-        }
-        setData(result)
-      } catch {
-        setError("Failed to load booking")
-      }
-    }
-    load()
-
-    const savedName = localStorage.getItem("staff_name")
-    if (savedName) {
-      setStaffName(savedName)
-      setNameEntered(true)
-    }
-  }, [token])
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-        <div className="text-center">
-          <p className="text-lg font-semibold text-destructive">{error}</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Contact your manager for a new link
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    )
-  }
-
-  const { booking, client, items } = data
-  const highValueItems = items.filter(
-    (i) => i.assetValue != null && Number(i.assetValue) > 150
-  )
-  const bulkItems = items.filter(
-    (i) => i.assetValue == null || Number(i.assetValue) <= 150
-  )
-
+  const highValueItems = items.filter((i) => i.isHighValue)
+  const bulkItems = items.filter((i) => !i.isHighValue)
   const totalItems = items.length
   const confirmedCount = packedItems.size
 
   function toggleItem(id: number) {
     setPackedItems((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
@@ -90,6 +67,24 @@ export function PickingList({ token }: { token: string }) {
     if (staffName.trim()) {
       localStorage.setItem("staff_name", staffName.trim())
       setNameEntered(true)
+    }
+  }
+
+  async function handleConfirm() {
+    setSubmitting(true)
+    try {
+      await confirmPackedItems(
+        bookingId,
+        Array.from(packedItems),
+        staffName
+      )
+      toast.success("Items confirmed as packed")
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to confirm"
+      )
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -104,7 +99,7 @@ export function PickingList({ token }: { token: string }) {
             <Package className="h-8 w-8 mx-auto text-muted-foreground" />
             <h1 className="text-xl font-semibold mt-2">Picking List</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {booking.eventName}
+              {bookingEventName}
             </p>
           </div>
           <Input
@@ -126,18 +121,16 @@ export function PickingList({ token }: { token: string }) {
       <div className="sticky top-0 bg-background border-b p-4 space-y-2 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">{booking.eventName}</h1>
-            <p className="text-sm text-muted-foreground">{client?.name}</p>
+            <h1 className="text-lg font-semibold">{bookingEventName}</h1>
+            <p className="text-sm text-muted-foreground">{clientName}</p>
           </div>
-          <Badge>{booking.status}</Badge>
+          <Badge>{bookingStatus}</Badge>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span>
             {confirmedCount} of {totalItems} confirmed
           </span>
-          <span className="text-muted-foreground">
-            {staffName}
-          </span>
+          <span className="text-muted-foreground">{staffName}</span>
         </div>
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <div
@@ -184,10 +177,6 @@ export function PickingList({ token }: { token: string }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {item.assetName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.assetValue != null &&
-                        `$${Number(item.assetValue).toLocaleString()}`}
                     </p>
                   </div>
                   <span className="text-xs text-muted-foreground">
@@ -239,8 +228,12 @@ export function PickingList({ token }: { token: string }) {
           >
             Mark All Packed
           </Button>
-          <Button className="flex-1">
-            Confirm & Continue
+          <Button
+            className="flex-1"
+            disabled={submitting || confirmedCount === 0}
+            onClick={handleConfirm}
+          >
+            {submitting ? "Saving..." : "Confirm & Continue"}
           </Button>
         </div>
       </div>

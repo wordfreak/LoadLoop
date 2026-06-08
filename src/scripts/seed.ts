@@ -27,7 +27,7 @@ async function seed() {
 
   console.log("Creating admin user...")
   const passwordHash = await hash("Demo1234!", 12)
-  const [user] = await db
+  await db
     .insert(schema.users)
     .values({
       tenantId: tenant.id,
