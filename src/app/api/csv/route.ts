@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { assets, bookings, clients } from "@/lib/db/schema"

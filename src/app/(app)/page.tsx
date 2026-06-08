@@ -58,8 +58,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Available" value={counters.assetsAvailable} icon={Package} color="emerald" />
         <StatCard label="Out" value={counters.assetsCurrentlyOut} icon={Truck} color="blue" />
-        <StatCard label="Overdue" value={counters.overdueReturns} icon={AlertTriangle} color="red" alert />
-        <StatCard label="Damaged" value={counters.damagedBlocked} icon={Wrench} color="amber" alert />
+        <StatCard label="Overdue" value={counters.overdueReturns} icon={AlertTriangle} color="red" />
+        <StatCard label="Damaged" value={counters.damagedBlocked} icon={Wrench} color="amber" />
         <StatCard label="Due this week" value={counters.returnsDueThisWeek} icon={Calendar} color="violet" />
         <StatCard label="Value at risk" value={`$${counters.valueAtRisk.toLocaleString()}`} icon={DollarSign} color="slate" />
       </div>
@@ -139,13 +139,11 @@ function StatCard({
   value,
   icon: Icon,
   color,
-  alert,
 }: {
   label: string
   value: string | number
   icon: React.ComponentType<{ className?: string }>
   color: "emerald" | "blue" | "red" | "amber" | "violet" | "slate"
-  alert?: boolean
 }) {
   const borders: Record<string, string> = {
     emerald: "border-l-emerald-400",

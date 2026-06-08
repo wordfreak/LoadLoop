@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { eq, and, inArray, gt, ne } from "drizzle-orm"
+import { eq, and, inArray, gt } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import {
   bookingItems,

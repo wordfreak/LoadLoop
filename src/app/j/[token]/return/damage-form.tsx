@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Camera, Trash2 } from "lucide-react"
-import { toast } from "sonner"
 
 type DamageFormProps = {
   isDamage: boolean
