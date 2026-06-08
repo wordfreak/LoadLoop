@@ -3,6 +3,9 @@ import { getDatabase } from "@/lib/db"
 import { tenants } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { CsvImport } from "@/features/csv/import"
+import Link from "next/link"
 
 export default async function SettingsPage() {
   const session = await auth()
@@ -23,6 +26,30 @@ export default async function SettingsPage() {
           Company and system configuration
         </p>
       </div>
+
+      <CsvImport />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">CSV Export</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Download your data as CSV files for backup or analysis.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/api/csv?table=assets">
+              <Button variant="outline">Assets</Button>
+            </Link>
+            <Link href="/api/csv?table=bookings">
+              <Button variant="outline">Bookings</Button>
+            </Link>
+            <Link href="/api/csv?table=clients">
+              <Button variant="outline">Clients</Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -50,27 +77,6 @@ export default async function SettingsPage() {
                   : "—"}
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Import & Export</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm font-medium mb-1">CSV Import</p>
-            <p className="text-xs text-muted-foreground">
-              Upload a CSV file to bulk import assets. The system will preview
-              your data before importing.
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-1">CSV Export</p>
-            <p className="text-xs text-muted-foreground">
-              Download all your data as CSV files for backup or analysis.
-            </p>
           </div>
         </CardContent>
       </Card>
