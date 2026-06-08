@@ -9,7 +9,7 @@ import {
   bookingItems,
   bookings,
 } from "@/lib/db/schema"
-import { eq, and, desc } from "drizzle-orm"
+import { eq, and, desc, ne } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { notFound } from "next/navigation"
@@ -88,9 +88,10 @@ export default async function AssetDetailPage({
         .where(
           and(
             eq(bookingItems.assetId, assetId),
-            eq(bookings.status, 
-              asset.status === "checked_out" ? "confirmed" : "confirmed"
-            )
+            ne(bookings.status, "cancelled"),
+            asset.status === "checked_out"
+              ? eq(bookings.status, "out")
+              : ne(bookings.status, "returned")
           )
         )
         .limit(1)

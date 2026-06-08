@@ -72,7 +72,7 @@ export default async function DashboardPage() {
           variant="red"
         />
         <CounterCard
-          title="Damaged / Blocked"
+          title="Damaged / Missing"
           value={counters.damagedBlocked}
           icon={Wrench}
           variant="amber"

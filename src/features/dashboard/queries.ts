@@ -1,6 +1,6 @@
 import { sql, eq, and, or, lt, gte, lte, ne, desc } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
-import { assets, bookings } from "@/lib/db/schema"
+import { assets, bookings, damageReports } from "@/lib/db/schema"
 
 export type DashboardCounters = {
   assetsAvailable: number
@@ -39,7 +39,7 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
     .select({
       assetsAvailable: sql<number>`count(*) filter (where ${assets.status} = 'available')`.mapWith(Number),
       assetsCurrentlyOut: sql<number>`count(*) filter (where ${assets.status} = 'checked_out')`.mapWith(Number),
-      damagedBlocked: sql<number>`count(*) filter (where ${assets.status} IN ('damaged', 'needs_inspection'))`.mapWith(Number),
+      damagedBlocked: sql<number>`count(*) filter (where ${assets.status} IN ('damaged', 'missing', 'needs_inspection'))`.mapWith(Number),
       valueAtRisk: sql<number>`COALESCE(sum(${assets.value}::numeric) filter (where ${assets.status} = 'checked_out'), 0)`.mapWith(Number),
     })
     .from(assets)
@@ -99,6 +99,25 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
     .orderBy(desc(bookings.startDate))
     .limit(5)
 
+  const pendingDamageRows = await db
+    .select({
+      id: damageReports.id,
+      assetName: assets.name,
+      description: damageReports.description,
+      status: damageReports.status,
+      createdAt: damageReports.createdAt,
+    })
+    .from(damageReports)
+    .innerJoin(assets, eq(assets.id, damageReports.assetId))
+    .where(
+      and(
+        eq(damageReports.tenantId, tenantId),
+        eq(damageReports.status, "pending")
+      )
+    )
+    .orderBy(desc(damageReports.createdAt))
+    .limit(5)
+
   const goingOutRows = await db
     .select({
       id: bookings.id,
@@ -128,17 +147,29 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
       returnsDueThisWeek: returnsDueResult?.count ?? 0,
       valueAtRisk: counters?.valueAtRisk ?? 0,
     },
-    needsAction: needsActionRows.map((row) => ({
-      id: row.id,
-      eventName: row.eventName,
-      status: row.status,
-      startDate: row.startDate,
-      returnDate: row.returnDate,
-      context:
-        row.status === "draft"
-          ? "Draft booking"
-          : `Overdue — was due ${row.returnDate}`,
-    })),
+    needsAction: [
+      ...needsActionRows.map((row) => ({
+        id: row.id,
+        eventName: row.eventName,
+        status: row.status,
+        startDate: row.startDate,
+        returnDate: row.returnDate,
+        context:
+          row.status === "draft"
+            ? "Draft booking"
+            : `Overdue — was due ${row.returnDate}`,
+      })),
+      ...pendingDamageRows.map((row) => ({
+        id: row.id,
+        eventName: row.assetName,
+        status: "damaged",
+        startDate: new Date(row.createdAt).toISOString().split("T")[0],
+        returnDate: null,
+        context: row.description
+          ? `Damage — ${row.description.slice(0, 60)}`
+          : "Pending damage report",
+      })),
+    ],
     goingOutThisWeek: goingOutRows.map((row) => ({
       id: row.id,
       eventName: row.eventName,

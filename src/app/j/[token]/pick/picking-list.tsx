@@ -47,6 +47,7 @@ export function PickingListClient({
   })
   const [packedItems, setPackedItems] = useState<Set<number>>(new Set())
   const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   const highValueItems = items.filter((i) => i.isHighValue)
   const bulkItems = items.filter((i) => !i.isHighValue)
@@ -78,7 +79,7 @@ export function PickingListClient({
         Array.from(packedItems),
         staffName
       )
-      toast.success("Items confirmed as packed & out")
+      setSubmitted(true)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to confirm"
@@ -217,25 +218,38 @@ export function PickingListClient({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => {
-              const allIds = items.map((i) => i.id)
-              setPackedItems(new Set(allIds))
-            }}
-          >
-            Mark All Packed
-          </Button>
-          <Button
-            className="flex-1"
-            disabled={submitting || confirmedCount === 0}
-            onClick={handleConfirm}
-          >
-            {submitting ? "Saving..." : "Confirm Packed & Out"}
-          </Button>
-        </div>
+        {submitted ? (
+          <div className="text-center space-y-3 py-4">
+            <div className="flex items-center justify-center gap-3 text-emerald-700">
+              <Check className="h-6 w-6" />
+              <p className="text-lg font-semibold">Pack &amp; Dispatch Complete</p>
+            </div>
+            <p className="text-sm">{confirmedCount} items packed and out</p>
+            <p className="text-xs text-muted-foreground">
+              Submitted by {staffName}. Dashboard updated.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                const allIds = items.map((i) => i.id)
+                setPackedItems(new Set(allIds))
+              }}
+            >
+              Mark All Packed
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={submitting || confirmedCount === 0}
+              onClick={handleConfirm}
+            >
+              {submitting ? "Saving..." : "Confirm Packed & Out"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

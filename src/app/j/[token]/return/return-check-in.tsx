@@ -1,21 +1,19 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Check,
   AlertTriangle,
   X,
   HelpCircle,
-  Camera,
-  Trash2,
 } from "lucide-react"
 import { completeReturnCheckIn } from "@/features/bookings/workflow-actions"
 import { toast } from "sonner"
+import { DamageForm } from "./damage-form"
 
 type ItemProps = {
   id: number
@@ -63,11 +61,12 @@ export function ReturnCheckInClient({
     return initial
   })
   const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitResult, setSubmitResult] = useState({ good: 0, damaged: 0, missing: 0, inspection: 0 })
   const [activeItem, setActiveItem] = useState<number | null>(null)
   const [damageNote, setDamageNote] = useState("")
   const [damagePhotoUrl, setDamagePhotoUrl] = useState("")
   const [photoUploading, setPhotoUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function setItemState(
     id: number,
@@ -205,7 +204,19 @@ export function ReturnCheckInClient({
       }
 
       await completeReturnCheckIn(token, cleaned, staffName)
-      toast.success("Return completed")
+
+      let good = 0
+      let damaged = 0
+      let missing = 0
+      let inspection = 0
+      for (const detail of Object.values(cleaned)) {
+        if (detail.state === "good") good++
+        else if (detail.state === "damaged") damaged++
+        else if (detail.state === "missing") missing++
+        else if (detail.state === "needs_inspection") inspection++
+      }
+      setSubmitResult({ good, damaged, missing, inspection })
+      setSubmitted(true)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to complete return"
@@ -256,84 +267,22 @@ export function ReturnCheckInClient({
       </div>
 
       <div className="p-4 space-y-3 pb-24">
-        {activeItem != null && (() => {
-          const isDamage = itemStates[activeItem].state === "damaged"
-          return (
-            <Card className="border-amber-300 bg-amber-50">
-              <CardContent className="p-4 space-y-3">
-                <p className="text-sm font-medium text-amber-800">
-                  {isDamage ? "Report Damage" : "Report Missing"}
-                </p>
-                <Textarea
-                  placeholder={
-                    isDamage
-                      ? "Describe the damage in detail..."
-                      : "Describe what happened to this item..."
-                  }
-                  value={damageNote}
-                  onChange={(e) => setDamageNote(e.target.value)}
-                  rows={3}
-                />
-                {isDamage && (
-                  <div className="space-y-2">
-                    {damagePhotoUrl ? (
-                      <div className="relative">
-                        <img
-                          src={damagePhotoUrl}
-                          alt="Damage preview"
-                          className="w-full max-h-48 rounded object-cover"
-                        />
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="absolute top-2 right-2 h-7 w-7"
-                          onClick={() => setDamagePhotoUrl("")}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full h-20 border-dashed gap-2"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={photoUploading}
-                        >
-                          <Camera className="h-5 w-5" />
-                          {photoUploading ? "Uploading..." : "Take or Select Photo"}
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handlePhotoUpload(file)
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground text-center">
-                          A photo is required for damage reports
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={confirmDamageOrMissing}>
-                    Confirm
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={cancelDamageForm}>
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })()}
+        {activeItem != null && (
+          <DamageForm
+            isDamage={itemStates[activeItem].state === "damaged"}
+            note={damageNote}
+            photoUrl={damagePhotoUrl}
+            uploading={photoUploading}
+            onNoteChange={setDamageNote}
+            onPhotoSelect={handlePhotoUpload}
+            onPhotoClear={() => setDamagePhotoUrl("")}
+            onConfirm={confirmDamageOrMissing}
+            onCancel={cancelDamageForm}
+            assetName={
+              items.find((i) => i.id === activeItem)?.assetName ?? ""
+            }
+          />
+        )}
 
         {items.map((item) => {
           const itemState = itemStates[item.id]
@@ -427,13 +376,46 @@ export function ReturnCheckInClient({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
-        <Button
-          className="w-full"
-          disabled={submitting}
-          onClick={handleComplete}
-        >
-          {submitting ? "Saving..." : "Complete Return"}
-        </Button>
+        {submitted ? (
+          <div className="text-center space-y-3 py-4">
+            <div className="flex items-center justify-center gap-3 text-emerald-700">
+              <Check className="h-6 w-6" />
+              <p className="text-lg font-semibold">Return Completed</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded bg-emerald-50 p-2">Good: {submitResult.good}</div>
+              <div className="rounded bg-amber-50 p-2">Damaged: {submitResult.damaged}</div>
+              <div className="rounded bg-red-50 p-2">Missing: {submitResult.missing}</div>
+              <div className="rounded bg-gray-100 p-2">Inspect: {submitResult.inspection}</div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Submitted by {staffName}. Dashboard updated.
+            </p>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                const updated: ItemStates = {}
+                for (const item of items) {
+                  updated[item.id] = { state: "good" }
+                }
+                setItemStates(updated)
+              }}
+            >
+              Mark All Good
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={submitting}
+              onClick={handleComplete}
+            >
+              {submitting ? "Saving..." : "Complete Return"}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )
