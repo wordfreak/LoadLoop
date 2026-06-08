@@ -24,7 +24,12 @@ export default async function PickPage({
     isHighValue: item.isHighValue,
   }))
 
-  const alreadyDispatched = data.booking.status === "out"
+  const allCheckedOut = data.items.every(
+    (item) => item.quantityCheckedOut >= item.quantityBooked
+  )
+  const someCheckedOut = data.items.some(
+    (item) => item.quantityCheckedOut > 0
+  )
 
   return (
     <PickingListClient
@@ -33,7 +38,8 @@ export default async function PickPage({
       bookingStatus={data.booking.status}
       clientName={data.client?.name ?? null}
       items={sanitizedItems}
-      alreadyDispatched={alreadyDispatched}
+      alreadyDispatched={allCheckedOut}
+      partiallyDispatched={someCheckedOut && !allCheckedOut}
     />
   )
 }

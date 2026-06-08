@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CsvImport } from "@/features/csv/import"
+import { CsvTemplate } from "@/features/csv/template"
 import Link from "next/link"
 
 export default async function SettingsPage() {
@@ -28,6 +29,8 @@ export default async function SettingsPage() {
       </div>
 
       <CsvImport />
+
+      <CsvTemplate />
 
       <Card>
         <CardHeader>

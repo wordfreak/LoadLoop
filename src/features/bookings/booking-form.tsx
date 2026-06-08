@@ -47,21 +47,25 @@ export function NewBookingForm({
   const [returnDate, setReturnDate] = useState("")
   const [depositAmount, setDepositAmount] = useState("")
   const [notes, setNotes] = useState("")
-  const [selectedAssets, setSelectedAssets] = useState<number[]>([])
+  const [selectedAssets, setSelectedAssets] = useState<Map<number, number>>(
+    new Map()
+  )
   const [conflicts, setConflicts] = useState<BookingConflict[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (selectedAssets.length === 0 || !startDate || !endDate) {
+    if (selectedAssets.size === 0 || !startDate || !endDate) {
       return
     }
 
     let cancelled = false
 
+    const assetIds = Array.from(selectedAssets.keys())
+
     async function check() {
       try {
         const result = await detectBookingConflicts(
-          selectedAssets,
+          assetIds,
           startDate,
           endDate,
           tenantId
@@ -79,11 +83,27 @@ export function NewBookingForm({
   }, [selectedAssets, startDate, endDate, tenantId])
 
   function toggleAsset(assetId: number) {
-    setSelectedAssets((prev) =>
-      prev.includes(assetId)
-        ? prev.filter((id) => id !== assetId)
-        : [...prev, assetId]
-    )
+    setSelectedAssets((prev) => {
+      const next = new Map(prev)
+      if (next.has(assetId)) {
+        next.delete(assetId)
+      } else {
+        next.set(assetId, 1)
+      }
+      return next
+    })
+  }
+
+  function setAssetQuantity(assetId: number, qty: number) {
+    setSelectedAssets((prev) => {
+      const next = new Map(prev)
+      if (qty < 1) {
+        next.delete(assetId)
+      } else {
+        next.set(assetId, qty)
+      }
+      return next
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -91,10 +111,12 @@ export function NewBookingForm({
     setSubmitting(true)
 
     try {
-      const items = selectedAssets.map((assetId) => ({
-        assetId,
-        quantityBooked: 1,
-      }))
+      const items = Array.from(selectedAssets.entries()).map(
+        ([assetId, qty]) => ({
+          assetId,
+          quantityBooked: qty,
+        })
+      )
 
       const result = await createBooking({
         clientId: parseInt(clientId),
@@ -240,22 +262,38 @@ export function NewBookingForm({
             <CardTitle className="text-base">Equipment</CardTitle>
           </CardHeader>
           <CardContent>
-            {selectedAssets.length > 0 && (
+            {selectedAssets.size > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
-                {selectedAssets.map((id) => {
-                  const asset = assets.find((a) => a.id === id)
-                  return (
-                    <Badge
-                      key={id}
-                      variant="secondary"
-                      className="cursor-pointer gap-1"
-                      onClick={() => toggleAsset(id)}
-                    >
-                      {asset?.name ?? id}
-                      <X className="h-3 w-3" />
-                    </Badge>
-                  )
-                })}
+                {Array.from(selectedAssets.entries()).map(
+                  ([id, qty]) => {
+                    const asset = assets.find((a) => a.id === id)
+                    const isBulk = asset?.isBulk
+                    return (
+                      <div key={id} className="flex items-center gap-1">
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer gap-1"
+                          onClick={() => toggleAsset(id)}
+                        >
+                          {asset?.name ?? id}
+                          {isBulk && qty > 1 && ` ×${qty}`}
+                          <X className="h-3 w-3" />
+                        </Badge>
+                        {isBulk && selectedAssets.has(id) && (
+                          <input
+                            type="number"
+                            min="1"
+                            value={qty}
+                            onChange={(e) =>
+                              setAssetQuantity(id, parseInt(e.target.value) || 1)
+                            }
+                            className="w-14 h-6 text-xs border rounded px-1"
+                          />
+                        )}
+                      </div>
+                    )
+                  }
+                )}
               </div>
             )}
 
@@ -284,13 +322,16 @@ export function NewBookingForm({
                   key={asset.id}
                   type="button"
                   onClick={() => toggleAsset(asset.id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                    selectedAssets.includes(asset.id)
+                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex justify-between ${
+                    selectedAssets.has(asset.id)
                       ? "bg-primary text-primary-foreground"
                       : "hover:bg-muted"
                   }`}
                 >
-                  {asset.name}
+                  <span>{asset.name}</span>
+                  {asset.isBulk && (
+                    <span className="text-xs opacity-60">Bulk</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -306,7 +347,7 @@ export function NewBookingForm({
             !eventName ||
             !startDate ||
             !endDate ||
-            selectedAssets.length === 0
+            selectedAssets.size === 0
           }
         >
           {submitting ? "Creating..." : "Create Booking"}

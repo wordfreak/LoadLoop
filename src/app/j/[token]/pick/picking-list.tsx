@@ -28,6 +28,7 @@ export function PickingListClient({
   clientName,
   items,
   alreadyDispatched,
+  partiallyDispatched,
 }: {
   token: string
   bookingEventName: string
@@ -35,6 +36,7 @@ export function PickingListClient({
   clientName: string | null
   items: ItemProps[]
   alreadyDispatched: boolean
+  partiallyDispatched: boolean
 }) {
   const [staffName, setStaffName] = useState(() => {
     if (typeof window !== "undefined") {
@@ -107,8 +109,81 @@ export function PickingListClient({
           <Check className="h-10 w-10 mx-auto text-emerald-600" />
           <h1 className="text-xl font-semibold">Already Dispatched</h1>
           <p className="text-sm text-muted-foreground">
-            {bookingEventName} has already been packed and dispatched.
+            All items for {bookingEventName} have been packed and dispatched.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (partiallyDispatched) {
+    return (
+      <div className="min-h-screen bg-muted">
+        <div className="sticky top-0 bg-background border-b p-4 z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold">{bookingEventName}</h1>
+              <p className="text-sm text-muted-foreground">{clientName}</p>
+            </div>
+            <Badge>{bookingStatus}</Badge>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-amber-800">
+              Partially Dispatched
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              Some items were already checked out. You can mark the remaining
+              items below.
+            </p>
+          </div>
+          {items
+            .filter((item) => item.quantityCheckedOut < item.quantityBooked)
+            .map((item) => (
+              <button
+                key={item.id}
+                onClick={() => toggleItem(item.id)}
+                className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
+                  packedItems.has(item.id)
+                    ? "bg-emerald-50 border-emerald-200"
+                    : "bg-background hover:bg-muted/50"
+                }`}
+              >
+                <div
+                  className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    packedItems.has(item.id)
+                      ? "bg-emerald-500 text-white"
+                      : "bg-muted"
+                  }`}
+                >
+                  {packedItems.has(item.id) ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {item.quantityBooked}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {item.assetName}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Qty: {item.quantityBooked}
+                </span>
+              </button>
+            ))}
+        </div>
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
+          <Button
+            className="w-full"
+            disabled={submitting || packedItems.size === 0}
+            onClick={handleConfirm}
+          >
+            {submitting ? "Saving..." : "Confirm Remaining Packed & Out"}
+          </Button>
         </div>
       </div>
     )

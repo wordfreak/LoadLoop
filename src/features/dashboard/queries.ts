@@ -178,6 +178,8 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
     .orderBy(desc(bookings.startDate))
     .limit(10)
 
+  const seen = new Set<string>()
+
   return {
     counters: {
       assetsAvailable: counters?.assetsAvailable ?? 0,
@@ -188,48 +190,76 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
       valueAtRisk: counters?.valueAtRisk ?? 0,
     },
     needsAction: [
-      ...needsActionRows.map((row) => ({
-        id: row.id,
-        eventName: row.eventName,
-        status: row.status,
-        startDate: row.startDate,
-        returnDate: row.returnDate,
-        context:
-          row.status === "draft"
-            ? "Draft booking"
-            : `Overdue — was due ${row.returnDate}`,
-      })),
-      ...pendingDamageRows.map((row) => ({
-        id: row.id,
-        eventName: row.assetName,
-        status: "damaged",
-        startDate: new Date(row.createdAt).toISOString().split("T")[0],
-        returnDate: null,
-        context: row.description
-          ? `Damage — ${row.description.slice(0, 60)}`
-          : "Pending damage report",
-      })),
-      ...problemAssets.map((row) => ({
-        id: row.id,
-        eventName: row.name,
-        status: row.status,
-        startDate: new Date().toISOString().split("T")[0],
-        returnDate: null,
-        context:
-          row.status === "missing"
-            ? "Missing — needs investigation"
-            : "Needs inspection",
-      })),
-      ...itemIssues.map((row) => ({
-        id: row.id,
-        eventName: row.assetName,
-        status: row.quantityDamaged > 0 ? "damaged" : "missing",
-        startDate: new Date().toISOString().split("T")[0],
-        returnDate: null,
-        context: row.quantityDamaged > 0
-          ? `${row.quantityDamaged} damaged in ${row.bookingName}`
-          : `${row.quantityMissing} missing from ${row.bookingName}`,
-      })),
+      ...needsActionRows
+        .filter((row) => {
+          const key = `booking-${row.id}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .map((row) => ({
+          id: row.id,
+          eventName: row.eventName,
+          status: row.status,
+          startDate: row.startDate,
+          returnDate: row.returnDate,
+          context:
+            row.status === "draft"
+              ? "Draft booking"
+              : `Overdue — was due ${row.returnDate}`,
+        })),
+      ...pendingDamageRows
+        .filter((row) => {
+          const key = `damage-${row.id}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .map((row) => ({
+          id: row.id,
+          eventName: row.assetName,
+          status: "damaged",
+          startDate: new Date(row.createdAt).toISOString().split("T")[0],
+          returnDate: null,
+          context: row.description
+            ? `Damage — ${row.description.slice(0, 60)}`
+            : "Pending damage report",
+        })),
+      ...problemAssets
+        .filter((row) => {
+          const key = `asset-${row.id}-${row.status}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .map((row) => ({
+          id: row.id,
+          eventName: row.name,
+          status: row.status,
+          startDate: new Date().toISOString().split("T")[0],
+          returnDate: null,
+          context:
+            row.status === "missing"
+              ? "Missing — needs investigation"
+              : "Needs inspection",
+        })),
+      ...itemIssues
+        .filter((row) => {
+          const key = `item-${row.id}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .map((row) => ({
+          id: row.id,
+          eventName: row.assetName,
+          status: row.quantityDamaged > 0 ? "damaged" : "missing",
+          startDate: new Date().toISOString().split("T")[0],
+          returnDate: null,
+          context: row.quantityDamaged > 0
+            ? `${row.quantityDamaged} damaged in ${row.bookingName}`
+            : `${row.quantityMissing} missing from ${row.bookingName}`,
+        })),
     ],
     goingOutThisWeek: goingOutRows.map((row) => ({
       id: row.id,

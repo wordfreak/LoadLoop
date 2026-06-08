@@ -6,6 +6,34 @@ import { bookingLinks } from "@/lib/db/schema"
 const MAX_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
 
+async function uploadToCloudinary(
+  base64Data: string,
+  tenantId: number
+): Promise<string> {
+  const cloudinary = (await import("cloudinary")).v2
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  })
+
+  const result = await cloudinary.uploader.upload(base64Data, {
+    folder: `loadloop/tenant_${tenantId}/damage`,
+    resource_type: "image",
+    transformation: [{ quality: "auto", fetch_format: "auto" }],
+  })
+
+  return result.secure_url
+}
+
+function hasCloudinary(): boolean {
+  return !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  )
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ token: string }> }
@@ -55,6 +83,15 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString("base64")
     const dataUrl = `data:${file.type};base64,${base64}`
+
+    if (hasCloudinary()) {
+      try {
+        const cloudUrl = await uploadToCloudinary(dataUrl, link.tenantId)
+        return NextResponse.json({ url: cloudUrl })
+      } catch {
+        return NextResponse.json({ url: dataUrl })
+      }
+    }
 
     return NextResponse.json({ url: dataUrl })
   } catch {

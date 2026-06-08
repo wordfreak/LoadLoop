@@ -25,31 +25,33 @@
 - [x] Damage report creation with auto-block
 
 ## Milestone 4: Demo Workflows ✅
-- [x] Owner Dashboard (6 counters + needs-action + going-out-this-week)
+- [x] Owner Dashboard (6 counters + needs-action + going-out-this-week, deduplicated)
 - [x] Asset Register (search, filter, TanStack Table)
 - [x] Asset Detail (photo, timeline, damage history)
-- [x] Booking Detail (client, items, deposit, links)
+- [x] Booking Detail (client, items, deposit, links, owner recovery actions)
 - [x] Booking link generation (pick + return, UUID tokens)
-- [x] Mobile Pack & Dispatch (public, no-login, token-secured)
-- [x] Return Check-In (Good/Damaged/Missing/Inspect, token-secured)
+- [x] Mobile Pack & Dispatch (public, no-login, token-secured, init from DB state)
+- [x] Return Check-In (Good/Damaged/Missing/Inspect, token-secured, unchecked default)
 - [x] Damage report from return flow with photo upload
-- [x] "Mark All Packed" bulk action
+- [x] "Mark All Packed" / "Mark All Good" bulk actions
 - [x] Asset auto-blocking when damaged
 - [x] Movement history timeline
-- [x] New Booking page with conflict detection (damaged items excluded)
+- [x] New Booking page with conflict detection (bulk + individual, quantity input)
 - [x] Staff links: server-side data fetching, sanitized props
+- [x] Owner recovery: mark dispatched, mark all returned, correct status, late damage
+- [x] DB transactions on workflow mutations
 
 ## Milestone 5: Polish + Deploy ✅
-- [x] Seed script (Apex AV, 40 assets, 5 bookings, damage reports)
-- [x] Seed script is idempotent (safe to re-run)
+- [x] Seed script (Apex AV, 40 assets, 5 bookings, damage reports, idempotent)
 - [x] Vercel deployment (loadloop-omega.vercel.app)
 - [x] Neon database configured + seeded
 - [x] README.md with setup instructions
-- [x] CSV/Excel asset import (drag-drop, auto-map, preview, batch insert)
-- [x] CSV export (assets, bookings, clients — per-table download)
-- [x] File upload API for damage photos (camera capture, base64 storage)
-- [ ] QR label sheet PDF
+- [x] CSV/TSV asset import (drag-drop, auto-map, preview, category, duplicate detection)
+- [x] CSV export (assets, bookings, clients — Papa Parse escaping)
+- [x] Sample CSV template download
+- [x] Staff photo upload via `/api/job/[token]/upload` (Cloudinary-ready, base64 fallback)
+- [x] File sizes under 450 lines
 - [ ] QR scanning in mobile workflow
-- [ ] Cloudinary integration for production photo storage
+- [ ] Cloudinary production photo storage (keys needed)
 - [ ] Overdue detection email notifications
 - [ ] Demo video recording

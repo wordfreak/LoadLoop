@@ -32,7 +32,7 @@ export async function importAssets(
     const name = (row.name as string) ?? ""
     if (!name.trim()) continue
 
-    const [existing] = await db
+    const [existingByName] = await db
       .select({ id: assets.id })
       .from(assets)
       .where(
@@ -40,7 +40,39 @@ export async function importAssets(
       )
       .limit(1)
 
-    if (existing) {
+    let duplicate = !!existingByName
+
+    const code = (row.existingCode as string)?.trim()
+    if (code && !duplicate) {
+      const [byCode] = await db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(
+          and(
+            eq(assets.existingCode, code),
+            eq(assets.tenantId, tenantId)
+          )
+        )
+        .limit(1)
+      if (byCode) duplicate = true
+    }
+
+    const serial = (row.serialNumber as string)?.trim()
+    if (serial && !duplicate) {
+      const [bySerial] = await db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(
+          and(
+            eq(assets.serialNumber, serial),
+            eq(assets.tenantId, tenantId)
+          )
+        )
+        .limit(1)
+      if (bySerial) duplicate = true
+    }
+
+    if (duplicate) {
       skipped++
       continue
     }
