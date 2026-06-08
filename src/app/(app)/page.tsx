@@ -57,7 +57,7 @@ export default async function DashboardPage() {
           title="Assets Available"
           value={counters.assetsAvailable}
           icon={Package}
-          variant="green"
+          variant="blue"
         />
         <CounterCard
           title="Currently Out"
@@ -75,19 +75,19 @@ export default async function DashboardPage() {
           title="Damaged / Missing"
           value={counters.damagedBlocked}
           icon={Wrench}
-          variant="amber"
+          variant="red"
         />
         <CounterCard
           title="Returns Due This Week"
           value={counters.returnsDueThisWeek}
           icon={Calendar}
-          variant="purple"
+          variant="grey"
         />
         <CounterCard
           title="Value At Risk"
           value={`$${counters.valueAtRisk.toLocaleString()}`}
           icon={DollarSign}
-          variant="slate"
+          variant="grey"
         />
       </div>
 
@@ -157,24 +157,18 @@ function CounterCard({
   title: string
   value: string | number
   icon: React.ComponentType<{ className?: string }>
-  variant: "green" | "blue" | "red" | "amber" | "purple" | "slate"
+  variant: "blue" | "grey" | "red"
 }) {
   const accent = {
-    green: "border-l-emerald-500 text-emerald-700",
     blue: "border-l-blue-500 text-blue-700",
+    grey: "border-l-slate-300 text-slate-700",
     red: "border-l-red-500 text-red-700",
-    amber: "border-l-amber-500 text-amber-700",
-    purple: "border-l-purple-500 text-purple-700",
-    slate: "border-l-slate-400 text-slate-700",
   }
 
   const iconColor = {
-    green: "text-emerald-600/60",
-    blue: "text-blue-600/60",
-    red: "text-red-600/60",
-    amber: "text-amber-600/60",
-    purple: "text-purple-600/60",
-    slate: "text-slate-500/60",
+    blue: "text-blue-600/50",
+    grey: "text-slate-400/50",
+    red: "text-red-600/50",
   }
 
   return (

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createBooking, detectBookingConflicts } from "@/features/bookings/actions"
+import { createBooking, detectBookingConflicts, createClient } from "@/features/bookings/actions"
 import { toast } from "sonner"
 import { X, AlertTriangle } from "lucide-react"
 
@@ -40,6 +40,7 @@ export function NewBookingForm({
 }) {
   const router = useRouter()
   const [clientId, setClientId] = useState("")
+  const [newClientName, setNewClientName] = useState("")
   const [eventName, setEventName] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
@@ -111,6 +112,13 @@ export function NewBookingForm({
     setSubmitting(true)
 
     try {
+      let resolvedClientId = parseInt(clientId)
+
+      if (resolvedClientId === 0 && newClientName.trim()) {
+        const newClient = await createClient({ name: newClientName.trim() })
+        resolvedClientId = newClient.id
+      }
+
       const items = Array.from(selectedAssets.entries()).map(
         ([assetId, qty]) => ({
           assetId,
@@ -119,7 +127,7 @@ export function NewBookingForm({
       )
 
       const result = await createBooking({
-        clientId: parseInt(clientId),
+        clientId: resolvedClientId,
         eventName,
         startDate,
         endDate,
@@ -174,6 +182,7 @@ export function NewBookingForm({
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="0">+ Add new client</SelectItem>
                   {clients.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>
                       {c.name}
@@ -181,6 +190,14 @@ export function NewBookingForm({
                   ))}
                 </SelectContent>
               </Select>
+              {clientId === "0" && (
+                <Input
+                  placeholder="New client name"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  required
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="eventName">Event Name</Label>
@@ -344,6 +361,7 @@ export function NewBookingForm({
           disabled={
             submitting ||
             !clientId ||
+            (clientId === "0" && !newClientName.trim()) ||
             !eventName ||
             !startDate ||
             !endDate ||
