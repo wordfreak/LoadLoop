@@ -195,8 +195,8 @@ function StatCard({
     <Card
       className={
         alert
-          ? "border-l-2 border-l-destructive/70 bg-destructive/5"
-          : "bg-card"
+          ? "border-l-2 border-l-destructive/60 bg-destructive/5"
+          : "border-l-2 border-l-primary/40"
       }
     >
       <CardContent className="p-4">
