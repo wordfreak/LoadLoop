@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { clients, assets } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and, not } from "drizzle-orm"
 import { NewBookingForm } from "@/features/bookings/booking-form"
 
 export default async function NewBookingPage() {
@@ -23,7 +23,14 @@ export default async function NewBookingPage() {
       isBulk: assets.isBulk,
     })
     .from(assets)
-    .where(eq(assets.tenantId, tenantId))
+    .where(
+      and(
+        eq(assets.tenantId, tenantId),
+        not(eq(assets.status, "damaged")),
+        not(eq(assets.status, "missing")),
+        not(eq(assets.status, "retired"))
+      )
+    )
 
   return (
     <NewBookingForm

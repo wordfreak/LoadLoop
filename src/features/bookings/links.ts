@@ -51,10 +51,15 @@ export async function validateBookingLink(token: string) {
   return link
 }
 
-export async function getBookingForLink(token: string) {
+export async function getBookingForLink(
+  token: string,
+  expectedType?: LinkType
+) {
   const db = getDatabase()
   const link = await validateBookingLink(token)
   if (!link) return null
+
+  if (expectedType && link.linkType !== expectedType) return null
 
   const [booking] = await db
     .select()

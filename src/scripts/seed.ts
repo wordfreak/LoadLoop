@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-http"
 import { randomUUID } from "crypto"
 import { hash } from "bcryptjs"
+import { eq } from "drizzle-orm"
 import * as schema from "../lib/db/schema"
 
 async function seed() {
@@ -14,6 +15,40 @@ async function seed() {
 
   const sql = neon(databaseUrl)
   const db = drizzle(sql, { schema })
+
+  const [existingTenant] = await db
+    .select({ id: schema.tenants.id })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.slug, "apex-av"))
+    .limit(1)
+
+  if (existingTenant) {
+    console.log("Cleaning up existing demo data...")
+
+    const tenantBookings = await db
+      .select({ id: schema.bookings.id })
+      .from(schema.bookings)
+      .where(eq(schema.bookings.tenantId, existingTenant.id))
+
+    const bookingIds = tenantBookings.map((b) => b.id)
+
+    if (bookingIds.length > 0) {
+      const { inArray } = await import("drizzle-orm")
+      await db.delete(schema.bookingLinks).where(eq(schema.bookingLinks.tenantId, existingTenant.id))
+      await db.delete(schema.damageReports).where(eq(schema.damageReports.tenantId, existingTenant.id))
+      await db.delete(schema.assetMovements).where(eq(schema.assetMovements.tenantId, existingTenant.id))
+      await db.delete(schema.bookingItems).where(inArray(schema.bookingItems.bookingId, bookingIds))
+    }
+
+    await db.delete(schema.bookings).where(eq(schema.bookings.tenantId, existingTenant.id))
+    await db.delete(schema.assets).where(eq(schema.assets.tenantId, existingTenant.id))
+    await db.delete(schema.locations).where(eq(schema.locations.tenantId, existingTenant.id))
+    await db.delete(schema.categories).where(eq(schema.categories.tenantId, existingTenant.id))
+    await db.delete(schema.clients).where(eq(schema.clients.tenantId, existingTenant.id))
+    await db.delete(schema.users).where(eq(schema.users.tenantId, existingTenant.id))
+    await db.delete(schema.tenants).where(eq(schema.tenants.id, existingTenant.id))
+    console.log("Demo data cleaned up")
+  }
 
   console.log("Creating tenant...")
   const [tenant] = await db

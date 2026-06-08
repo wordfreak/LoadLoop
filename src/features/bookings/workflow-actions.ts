@@ -57,7 +57,10 @@ export async function confirmPackedItems(
   if (confirmedItemIds.length > 0) {
     await db
       .update(bookingItems)
-      .set({ quantityPacked: bookingItems.quantityBooked })
+      .set({
+        quantityPacked: bookingItems.quantityBooked,
+        quantityCheckedOut: bookingItems.quantityBooked,
+      })
       .where(
         and(
           eq(bookingItems.bookingId, bookingId),

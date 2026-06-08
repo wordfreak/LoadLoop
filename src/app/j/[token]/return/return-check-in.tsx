@@ -1,12 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { Check, AlertTriangle, X, HelpCircle } from "lucide-react"
+import {
+  Check,
+  AlertTriangle,
+  X,
+  HelpCircle,
+  Camera,
+  Trash2,
+} from "lucide-react"
 import { completeReturnCheckIn } from "@/features/bookings/workflow-actions"
 import { toast } from "sonner"
 
@@ -59,59 +66,104 @@ export function ReturnCheckInClient({
   const [activeItem, setActiveItem] = useState<number | null>(null)
   const [damageNote, setDamageNote] = useState("")
   const [damagePhotoUrl, setDamagePhotoUrl] = useState("")
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function setItemState(
     id: number,
     state: "good" | "damaged" | "missing" | "needs_inspection"
   ) {
-    if (state === "damaged" || state === "missing") {
-      setActiveItem(id)
+    if (state === "good" || state === "needs_inspection") {
+      setActiveItem(null)
       setDamageNote("")
       setDamagePhotoUrl("")
       setItemStates((prev) => ({
         ...prev,
-        [id]: { state, note: "", photoUrl: "" },
-      }))
-    } else {
-      setActiveItem(null)
-      setItemStates((prev) => ({
-        ...prev,
         [id]: { state },
       }))
+      return
+    }
+
+    setActiveItem(id)
+    setDamageNote("")
+    setDamagePhotoUrl("")
+    setItemStates((prev) => ({
+      ...prev,
+      [id]: { state, note: "", photoUrl: "" },
+    }))
+  }
+
+  async function handlePhotoUpload(file: File) {
+    setPhotoUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", { method: "POST", body: formData })
+      const result = await response.json()
+
+      if (!response.ok) throw new Error(result.error ?? "Upload failed")
+      setDamagePhotoUrl(result.url)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload photo"
+      )
+    } finally {
+      setPhotoUploading(false)
     }
   }
 
-  function confirmDamage() {
+  function confirmDamageOrMissing() {
     if (activeItem == null) return
+
+    const currentState = itemStates[activeItem].state
+
     if (!damageNote.trim()) {
-      toast.error("Please describe the damage")
+      toast.error(
+        currentState === "damaged"
+          ? "Please describe the damage"
+          : "Please describe what happened"
+      )
       return
     }
-    setItemStates((prev) => ({
-      ...prev,
-      [activeItem]: {
-        state: prev[activeItem].state,
-        note: damageNote.trim(),
-        photoUrl: damagePhotoUrl.trim() || undefined,
-      },
-    }))
-    setActiveItem(null)
+
+    if (currentState === "damaged" && damagePhotoUrl) {
+      setItemStates((prev) => ({
+        ...prev,
+        [activeItem]: {
+          state: "damaged",
+          note: damageNote.trim(),
+          photoUrl: damagePhotoUrl,
+        },
+      }))
+      setActiveItem(null)
+      setDamageNote("")
+      setDamagePhotoUrl("")
+    } else if (currentState === "damaged" && !damagePhotoUrl) {
+      toast.error("A photo of the damage is required")
+    } else {
+      setItemStates((prev) => ({
+        ...prev,
+        [activeItem]: {
+          state: "missing",
+          note: damageNote.trim(),
+        },
+      }))
+      setActiveItem(null)
+      setDamageNote("")
+      setDamagePhotoUrl("")
+    }
   }
 
-  function confirmMissing() {
+  function cancelDamageForm() {
     if (activeItem == null) return
-    if (!damageNote.trim()) {
-      toast.error("Please describe what happened")
-      return
-    }
     setItemStates((prev) => ({
       ...prev,
-      [activeItem]: {
-        state: prev[activeItem].state,
-        note: damageNote.trim(),
-      },
+      [activeItem]: { state: "good" },
     }))
     setActiveItem(null)
+    setDamageNote("")
+    setDamagePhotoUrl("")
   }
 
   function handleNameSubmit(e: React.FormEvent) {
@@ -123,9 +175,37 @@ export function ReturnCheckInClient({
   }
 
   async function handleComplete() {
+    if (activeItem != null) {
+      toast.error("Please confirm or cancel the damage form first")
+      return
+    }
+
+    for (const item of items) {
+      const state = itemStates[item.id]
+      if (state.state === "damaged") {
+        if (!state.note || state.note.trim().length === 0) {
+          toast.error(`${item.assetName}: damage description is required`)
+          return
+        }
+      }
+      if (state.state === "missing") {
+        if (!state.note || state.note.trim().length === 0) {
+          toast.error(`${item.assetName}: missing item note is required`)
+          return
+        }
+      }
+    }
+
     setSubmitting(true)
     try {
-      await completeReturnCheckIn(token, itemStates, staffName)
+      const cleaned = { ...itemStates }
+      for (const [id, detail] of Object.entries(cleaned)) {
+        if (detail.state === "damaged" && detail.photoUrl) {
+          cleaned[Number(id)] = { ...detail }
+        }
+      }
+
+      await completeReturnCheckIn(token, cleaned, staffName)
       toast.success("Return completed")
     } catch (err) {
       toast.error(
@@ -173,65 +253,88 @@ export function ReturnCheckInClient({
           </div>
           <Badge>{bookingStatus}</Badge>
         </div>
-        <div className="text-sm">
-          {items.length} items
-        </div>
+        <div className="text-sm">{items.length} items</div>
       </div>
 
       <div className="p-4 space-y-3 pb-24">
-        {activeItem != null && (
-          <Card className="border-amber-300 bg-amber-50">
-            <CardContent className="p-4 space-y-3">
-              <p className="text-sm font-medium text-amber-800">
-                {itemStates[activeItem].state === "damaged"
-                  ? "Report Damage"
-                  : "Report Missing"}
-              </p>
-              <Textarea
-                placeholder={
-                  itemStates[activeItem].state === "damaged"
-                    ? "Describe the damage..."
-                    : "Describe what happened..."
-                }
-                value={damageNote}
-                onChange={(e) => setDamageNote(e.target.value)}
-                rows={2}
-              />
-              {itemStates[activeItem].state === "damaged" && (
-                <Input
-                  placeholder="Photo URL (paste link)"
-                  value={damagePhotoUrl}
-                  onChange={(e) => setDamagePhotoUrl(e.target.value)}
-                />
-              )}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={
-                    itemStates[activeItem].state === "damaged"
-                      ? confirmDamage
-                      : confirmMissing
+        {activeItem != null && (() => {
+          const isDamage = itemStates[activeItem].state === "damaged"
+          return (
+            <Card className="border-amber-300 bg-amber-50">
+              <CardContent className="p-4 space-y-3">
+                <p className="text-sm font-medium text-amber-800">
+                  {isDamage ? "Report Damage" : "Report Missing"}
+                </p>
+                <Textarea
+                  placeholder={
+                    isDamage
+                      ? "Describe the damage in detail..."
+                      : "Describe what happened to this item..."
                   }
-                >
-                  Confirm
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setActiveItem(null)
-                    setItemStates((prev) => ({
-                      ...prev,
-                      [activeItem]: { state: "good" },
-                    }))
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  value={damageNote}
+                  onChange={(e) => setDamageNote(e.target.value)}
+                  rows={3}
+                />
+                {isDamage && (
+                  <div className="space-y-2">
+                    {damagePhotoUrl ? (
+                      <div className="relative">
+                        <img
+                          src={damagePhotoUrl}
+                          alt="Damage preview"
+                          className="w-full max-h-48 rounded object-cover"
+                        />
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-2 right-2 h-7 w-7"
+                          onClick={() => setDamagePhotoUrl("")}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full h-20 border-dashed gap-2"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={photoUploading}
+                        >
+                          <Camera className="h-5 w-5" />
+                          {photoUploading ? "Uploading..." : "Take or Select Photo"}
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handlePhotoUpload(file)
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground text-center">
+                          A photo is required for damage reports
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={confirmDamageOrMissing}>
+                    Confirm
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={cancelDamageForm}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
 
         {items.map((item) => {
           const itemState = itemStates[item.id]
@@ -240,12 +343,27 @@ export function ReturnCheckInClient({
           return (
             <Card key={item.id}>
               <CardContent className="p-3">
-                <p className="text-sm font-medium mb-3">{item.assetName}</p>
+                <p className="text-sm font-medium mb-3">
+                  {item.assetName}
+                  {itemState.state !== "good" &&
+                    itemState.state !== "needs_inspection" && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {itemState.state === "damaged" &&
+                          (itemState.note
+                            ? `— ${itemState.note.slice(0, 40)}${itemState.note.length > 40 ? "..." : ""}`
+                            : "— needs details")}
+                        {itemState.state === "missing" &&
+                          (itemState.note
+                            ? `— ${itemState.note.slice(0, 40)}${itemState.note.length > 40 ? "..." : ""}`
+                            : "— needs details")}
+                      </span>
+                    )}
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant={isGood ? "default" : "outline"}
                     size="sm"
-                    className={`h-12 ${
+                    className={`h-11 ${
                       isGood
                         ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                         : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
@@ -260,7 +378,7 @@ export function ReturnCheckInClient({
                       itemState.state === "damaged" ? "default" : "outline"
                     }
                     size="sm"
-                    className={`h-12 ${
+                    className={`h-11 ${
                       itemState.state === "damaged"
                         ? "bg-amber-600 hover:bg-amber-700 text-white"
                         : "border-amber-200 text-amber-700 hover:bg-amber-50"
@@ -275,7 +393,7 @@ export function ReturnCheckInClient({
                       itemState.state === "missing" ? "default" : "outline"
                     }
                     size="sm"
-                    className={`h-12 ${
+                    className={`h-11 ${
                       itemState.state === "missing"
                         ? "bg-red-600 hover:bg-red-700 text-white"
                         : "border-red-200 text-red-700 hover:bg-red-50"
@@ -292,7 +410,7 @@ export function ReturnCheckInClient({
                         : "outline"
                     }
                     size="sm"
-                    className={`h-12 ${
+                    className={`h-11 ${
                       itemState.state === "needs_inspection"
                         ? "bg-gray-600 hover:bg-gray-700 text-white"
                         : "border-gray-200 text-gray-600 hover:bg-gray-50"

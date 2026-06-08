@@ -30,22 +30,26 @@
 - [x] Asset Detail (photo, timeline, damage history)
 - [x] Booking Detail (client, items, deposit, links)
 - [x] Booking link generation (pick + return, UUID tokens)
-- [x] Mobile Picking List (public, no-login, persistence via server actions)
-- [x] Return Check-In (Good/Damaged/Missing/Inspect, persistence via server actions)
-- [x] Damage report from return flow
-- [x] "Mark All Packed" / "Mark All Good" bulk actions
+- [x] Mobile Pack & Dispatch (public, no-login, token-secured)
+- [x] Return Check-In (Good/Damaged/Missing/Inspect, token-secured)
+- [x] Damage report from return flow with photo upload
+- [x] "Mark All Packed" bulk action
 - [x] Asset auto-blocking when damaged
 - [x] Movement history timeline
-- [x] New Booking page with conflict detection UI
+- [x] New Booking page with conflict detection (damaged items excluded)
 - [x] Staff links: server-side data fetching, sanitized props
 
 ## Milestone 5: Polish + Deploy ✅
-- [x] Seed script (Apex AV, 40 assets, 5 bookings, 2 damage reports)
+- [x] Seed script (Apex AV, 40 assets, 5 bookings, damage reports)
+- [x] Seed script is idempotent (safe to re-run)
 - [x] Vercel deployment (loadloop-omega.vercel.app)
 - [x] Neon database configured + seeded
 - [x] README.md with setup instructions
-- [ ] CSV asset import (preview → map → confirm)
-- [ ] CSV export (ZIP download)
+- [x] CSV/Excel asset import (drag-drop, auto-map, preview, batch insert)
+- [x] CSV export (assets, bookings, clients — per-table download)
+- [x] File upload API for damage photos (camera capture, base64 storage)
 - [ ] QR label sheet PDF
-- [ ] Overdue detection + email notifications
+- [ ] QR scanning in mobile workflow
+- [ ] Cloudinary integration for production photo storage
+- [ ] Overdue detection email notifications
 - [ ] Demo video recording

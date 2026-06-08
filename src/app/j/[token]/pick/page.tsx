@@ -8,7 +8,7 @@ export default async function PickPage({
   params: Promise<{ token: string }>
 }) {
   const { token } = await params
-  const data = await getBookingForLink(token)
+  const data = await getBookingForLink(token, "pick")
 
   if (!data) notFound()
 

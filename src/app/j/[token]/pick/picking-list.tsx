@@ -78,7 +78,7 @@ export function PickingListClient({
         Array.from(packedItems),
         staffName
       )
-      toast.success("Items confirmed as packed")
+      toast.success("Items confirmed as packed & out")
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to confirm"
@@ -97,7 +97,7 @@ export function PickingListClient({
         >
           <div className="text-center">
             <Package className="h-8 w-8 mx-auto text-muted-foreground" />
-            <h1 className="text-xl font-semibold mt-2">Picking List</h1>
+            <h1 className="text-xl font-semibold mt-2">Pack &amp; Dispatch</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {bookingEventName}
             </p>
@@ -233,7 +233,7 @@ export function PickingListClient({
             disabled={submitting || confirmedCount === 0}
             onClick={handleConfirm}
           >
-            {submitting ? "Saving..." : "Confirm & Continue"}
+            {submitting ? "Saving..." : "Confirm Packed & Out"}
           </Button>
         </div>
       </div>
