@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { createBooking, detectBookingConflicts, createClient } from "@/features/bookings/actions"
 import { toast } from "sonner"
-import { X, AlertTriangle } from "lucide-react"
+import { X, AlertTriangle, Search } from "lucide-react"
 
 type ClientOption = { id: number; name: string }
 type AssetOption = { id: number; name: string; isBulk: boolean }
@@ -42,55 +42,38 @@ export function NewBookingForm({
   const [clientId, setClientId] = useState("")
   const [newClientName, setNewClientName] = useState("")
   const [eventName, setEventName] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
   const [deliveryDate, setDeliveryDate] = useState("")
   const [returnDate, setReturnDate] = useState("")
   const [depositAmount, setDepositAmount] = useState("")
   const [notes, setNotes] = useState("")
-  const [selectedAssets, setSelectedAssets] = useState<Map<number, number>>(
-    new Map()
-  )
+  const [selectedAssets, setSelectedAssets] = useState<Map<number, number>>(new Map())
   const [conflicts, setConflicts] = useState<BookingConflict[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [assetSearch, setAssetSearch] = useState("")
 
   useEffect(() => {
-    if (selectedAssets.size === 0 || !startDate || !endDate) {
-      return
-    }
+    if (selectedAssets.size === 0 || !deliveryDate || !returnDate) return
 
     let cancelled = false
-
     const assetIds = Array.from(selectedAssets.keys())
 
     async function check() {
       try {
-        const result = await detectBookingConflicts(
-          assetIds,
-          startDate,
-          endDate,
-          tenantId
-        )
+        const result = await detectBookingConflicts(assetIds, deliveryDate, returnDate, tenantId)
         if (!cancelled) setConflicts(result)
       } catch {
         if (!cancelled) setConflicts([])
       }
     }
     check()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedAssets, startDate, endDate, tenantId])
+    return () => { cancelled = true }
+  }, [selectedAssets, deliveryDate, returnDate, tenantId])
 
   function toggleAsset(assetId: number) {
     setSelectedAssets((prev) => {
       const next = new Map(prev)
-      if (next.has(assetId)) {
-        next.delete(assetId)
-      } else {
-        next.set(assetId, 1)
-      }
+      if (next.has(assetId)) next.delete(assetId)
+      else next.set(assetId, 1)
       return next
     })
   }
@@ -98,11 +81,8 @@ export function NewBookingForm({
   function setAssetQuantity(assetId: number, qty: number) {
     setSelectedAssets((prev) => {
       const next = new Map(prev)
-      if (qty < 1) {
-        next.delete(assetId)
-      } else {
-        next.set(assetId, qty)
-      }
+      if (qty < 1) next.delete(assetId)
+      else next.set(assetId, qty)
       return next
     })
   }
@@ -113,26 +93,23 @@ export function NewBookingForm({
 
     try {
       let resolvedClientId = parseInt(clientId)
-
       if (resolvedClientId === 0 && newClientName.trim()) {
         const newClient = await createClient({ name: newClientName.trim() })
         resolvedClientId = newClient.id
       }
 
-      const items = Array.from(selectedAssets.entries()).map(
-        ([assetId, qty]) => ({
-          assetId,
-          quantityBooked: qty,
-        })
-      )
+      const items = Array.from(selectedAssets.entries()).map(([assetId, qty]) => ({
+        assetId,
+        quantityBooked: qty,
+      }))
 
       const result = await createBooking({
         clientId: resolvedClientId,
         eventName,
-        startDate,
-        endDate,
-        deliveryDate: deliveryDate || undefined,
-        returnDate: returnDate || undefined,
+        startDate: deliveryDate,
+        endDate: returnDate,
+        deliveryDate,
+        returnDate,
         depositAmount: depositAmount ? parseFloat(depositAmount) : undefined,
         notes: notes || undefined,
         items,
@@ -140,9 +117,7 @@ export function NewBookingForm({
 
       if (result && "error" in result) {
         setConflicts(result.conflicts ?? [])
-        toast.error(
-          `${result.conflicts?.length ?? 0} item(s) already booked on these dates`
-        )
+        toast.error(`${result.conflicts?.length ?? 0} item(s) already booked on these dates`)
         return
       }
 
@@ -150,126 +125,63 @@ export function NewBookingForm({
       router.push("/bookings")
       router.refresh()
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create booking"
-      )
+      toast.error(err instanceof Error ? err.message : "Failed to create booking")
     } finally {
       setSubmitting(false)
     }
   }
 
-  const availableAssets = assets
+  const filteredAssets = assets.filter(
+    (a) => !assetSearch || a.name.toLowerCase().includes(assetSearch.toLowerCase())
+  )
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-semibold">New Booking</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Create a new equipment booking for a client
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Create a new equipment booking</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Client & Event</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Client & Event</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="client">Client</Label>
               <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a client" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select a client" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">+ Add new client</SelectItem>
                   {clients.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {clientId === "0" && (
-                <Input
-                  placeholder="New client name"
-                  value={newClientName}
-                  onChange={(e) => setNewClientName(e.target.value)}
-                  required
-                />
+                <Input placeholder="New client name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} required />
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="eventName">Event Name</Label>
-              <Input
-                id="eventName"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                placeholder="e.g. TechConf 2026"
-                required
-              />
+              <Input id="eventName" value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="e.g. Meridian Gala" required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Dates</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="deliveryDate">Delivery Date</Label>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                />
+                <p className="text-xs text-muted-foreground">When items leave the warehouse</p>
+                <Input id="deliveryDate" type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="returnDate">Return Date</Label>
-                <Input
-                  id="returnDate"
-                  type="date"
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                />
+                <p className="text-xs text-muted-foreground">When items come back</p>
+                <Input id="returnDate" type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deposit">Deposit Amount (USD)</Label>
-              <Input
-                id="deposit"
-                type="number"
-                min="0"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any special requirements..."
-              />
             </div>
           </CardContent>
         </Card>
@@ -278,79 +190,84 @@ export function NewBookingForm({
           <CardHeader>
             <CardTitle className="text-base">Equipment</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {selectedAssets.size > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {Array.from(selectedAssets.entries()).map(
-                  ([id, qty]) => {
-                    const asset = assets.find((a) => a.id === id)
-                    const isBulk = asset?.isBulk
-                    return (
-                      <div key={id} className="flex items-center gap-1">
-                        <Badge
-                          variant="secondary"
-                          className="cursor-pointer gap-1"
-                          onClick={() => toggleAsset(id)}
-                        >
-                          {asset?.name ?? id}
-                          {isBulk && qty > 1 && ` ×${qty}`}
-                          <X className="h-3 w-3" />
-                        </Badge>
-                        {isBulk && selectedAssets.has(id) && (
-                          <input
-                            type="number"
-                            min="1"
-                            value={qty}
-                            onChange={(e) =>
-                              setAssetQuantity(id, parseInt(e.target.value) || 1)
-                            }
-                            className="w-14 h-6 text-xs border rounded px-1"
-                          />
-                        )}
-                      </div>
-                    )
-                  }
-                )}
+              <div className="flex flex-wrap gap-2">
+                {Array.from(selectedAssets.entries()).map(([id, qty]) => {
+                  const asset = assets.find((a) => a.id === id)
+                  return (
+                    <Badge key={id} variant="secondary" className="cursor-pointer gap-1 py-1.5 pl-3 pr-1.5" onClick={() => toggleAsset(id)}>
+                      {asset?.name ?? id}
+                      {asset?.isBulk && qty > 1 && ` ×${qty}`}
+                      <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  )
+                })}
               </div>
             )}
 
             {conflicts.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                 <div className="flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <p className="text-sm font-medium">
-                    {conflicts.length} item(s) already booked on these dates
-                  </p>
+                  <p className="text-sm font-medium">{conflicts.length} item(s) already booked on these dates</p>
                 </div>
                 <div className="mt-2 space-y-1">
                   {conflicts.map((c) => (
                     <p key={c.assetId} className="text-xs text-amber-600">
-                      {c.assetName} — booked for {c.conflictEventName} (
-                      {c.conflictStartDate} to {c.conflictEndDate})
+                      {c.assetName} — booked for {c.conflictEventName} ({c.conflictStartDate} to {c.conflictEndDate})
                     </p>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="max-h-64 overflow-y-auto space-y-1">
-              {availableAssets.map((asset) => (
-                <button
-                  key={asset.id}
-                  type="button"
-                  onClick={() => toggleAsset(asset.id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex justify-between ${
-                    selectedAssets.has(asset.id)
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  <span>{asset.name}</span>
-                  {asset.isBulk && (
-                    <span className="text-xs opacity-60">Bulk</span>
-                  )}
-                </button>
-              ))}
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search equipment..."
+                  value={assetSearch}
+                  onChange={(e) => setAssetSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="max-h-56 overflow-y-auto space-y-0.5 border rounded-md p-1">
+                {filteredAssets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No equipment matches</p>
+                ) : (
+                  filteredAssets.map((asset) => {
+                    const selected = selectedAssets.has(asset.id)
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        onClick={() => toggleAsset(asset.id)}
+                        className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between transition-colors ${
+                          selected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
+                        }`}
+                      >
+                        <span>{asset.name}</span>
+                        <span className="text-xs text-muted-foreground">{asset.isBulk ? "Bulk" : selected ? "Added" : ""}</span>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="deposit">Deposit (USD)</Label>
+              <Input id="deposit" type="number" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special requirements..." />
             </div>
           </CardContent>
         </Card>
@@ -363,8 +280,8 @@ export function NewBookingForm({
             !clientId ||
             (clientId === "0" && !newClientName.trim()) ||
             !eventName ||
-            !startDate ||
-            !endDate ||
+            !deliveryDate ||
+            !returnDate ||
             selectedAssets.size === 0
           }
         >
