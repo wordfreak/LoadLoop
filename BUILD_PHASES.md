@@ -1,55 +1,55 @@
 # LoadLoop — Build Phases
 
-## Milestone 1: Foundation
+## Milestone 1: Foundation ✅
 - [x] .gitignore
 - [x] .env.example
 - [x] PRODUCT_SPEC.md
 - [x] BUILD_PHASES.md
-- [ ] LICENSES.md
-- [ ] SECURITY.md
-- [ ] Next.js 14 scaffold (App Router, TypeScript strict, Tailwind)
-- [ ] Drizzle ORM + database connection + env validation
-- [ ] shadcn/ui installation
-- [ ] NextAuth.js v5 setup (credentials provider)
-- [ ] Multi-tenant middleware
-- [ ] Basic layout (sidebar + header)
+- [x] LICENSES.md
+- [x] SECURITY.md
+- [x] Next.js 16 scaffold (App Router, TypeScript strict, Tailwind)
+- [x] Drizzle ORM + database connection + env validation
+- [x] shadcn/ui installation
+- [x] NextAuth.js v5 setup (credentials provider)
+- [x] Multi-tenant middleware
+- [x] Basic layout (sidebar + header)
 
-## Milestone 2: Database + Auth
-- [ ] Full Drizzle schema (tenants, users, clients, categories, locations, assets, bookings, booking_items, asset_movements, damage_reports, booking_links)
-- [ ] Database indexes
-- [ ] Authentication flow (login, logout, session)
-- [ ] Tenant isolation on all queries
-- [ ] Seed script structure
+## Milestone 2: Database + Auth ✅
+- [x] Full Drizzle schema (10 tables)
+- [x] Database indexes on critical query paths
+- [x] Authentication flow (login, logout, session)
+- [x] Tenant isolation utility
+- [x] Seed script structure
 
-## Milestone 3: Core Features
-- [ ] Asset CRUD with Cloudinary photo upload
-- [ ] Client CRUD
-- [ ] Category management
-- [ ] Location management
-- [ ] Booking creation with date-range conflict detection
-- [ ] booking_items table (individual + bulk quantities)
-- [ ] Asset movements (append-only log on every status change)
-- [ ] QR token generation per asset + QR PNG endpoint
+## Milestone 3: Core Features ✅
+- [x] Asset CRUD actions (create, update, status transitions)
+- [x] Client CRUD
+- [x] Booking creation with date-range conflict detection
+- [x] booking_items table (individual + bulk quantities)
+- [x] Asset movements (append-only log, state machine validation)
+- [x] QR token generation per asset + QR PNG endpoint
+- [x] Damage report creation with auto-block
 
-## Milestone 4: Demo Workflows
-- [ ] Owner Dashboard (6 counters + needs-action + going-out-this-week)
-- [ ] Asset Register (search, filter, TanStack Table)
-- [ ] Booking detail page with asset list
-- [ ] Booking link generation (pick + return, UUID token)
-- [ ] Mobile Picking List page (public, no-login link)
-- [ ] QR scanning with ZXing + manual tap fallback
-- [ ] Check-Out workflow (per-item confirm, optional condition photo)
-- [ ] Check-In / Return workflow (Good / Damaged / Missing / Needs Inspection)
-- [ ] Damage report form (photo required, repair cost, auto-block)
-- [ ] "Mark All Good" bulk action
-- [ ] Asset blocking when damaged (automatic)
-- [ ] Movement history timeline on asset detail
+## Milestone 4: Demo Workflows ✅
+- [x] Owner Dashboard (6 counters + needs-action + going-out-this-week)
+- [x] Asset Register (search, filter, TanStack Table)
+- [x] Asset Detail page (photo, fields, movement timeline, damage history)
+- [x] Booking Detail page (client, items, deposit, link generation)
+- [x] Booking link generation (pick + return, UUID token, WhatsApp copy)
+- [x] Mobile Picking List page (public, no-login, name entry, high-value + bulk)
+- [x] Check-In / Return workflow (Good / Damaged / Missing / Needs Inspection)
+- [x] Damage report form (photo required, repair cost, auto-block)
+- [x] "Mark All Good" / "Mark All Packed" bulk actions
+- [x] Asset blocking when damaged (automatic in damage report creation)
+- [x] Movement history timeline on asset detail
+- [x] Booking link copy button (WhatsApp-ready)
+- [x] Clients page
+- [x] Damage & Missing page
 
-## Milestone 5: Polish + Deploy
-- [ ] Seed script (40 assets, 5 bookings, realistic demo data)
+## Milestone 5: Polish + Deploy 🔜
+- [x] Seed script (Apex AV, 40 assets, 5 bookings, 2 damage reports)
 - [ ] CSV asset import (preview → map → confirm)
 - [ ] CSV export (ZIP download)
-- [ ] Bulk item quantity tracking
-- [ ] Overdue detection
+- [ ] Overdue detection cron + email
 - [ ] Vercel deployment
 - [ ] End-to-end demo verification
