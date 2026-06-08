@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config"
 import { NextResponse } from "next/server"
 
-export default auth((req) => {
+const proxy = auth((req) => {
   const { pathname } = req.nextUrl
 
   const publicPaths = ["/login", "/j/", "/api/auth/"]
@@ -19,6 +19,8 @@ export default auth((req) => {
 
   return NextResponse.next()
 })
+
+export { proxy }
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
