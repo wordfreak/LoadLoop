@@ -110,33 +110,37 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
     return { error: "conflict", conflicts }
   }
 
-  const [booking] = await db
-    .insert(bookings)
-    .values({
-      tenantId: session.user.tenantId,
-      clientId: parsed.clientId,
-      eventName: parsed.eventName,
-      startDate: parsed.startDate,
-      endDate: parsed.endDate,
-      deliveryDate: parsed.deliveryDate ?? null,
-      returnDate: parsed.returnDate ?? null,
-      status: "confirmed",
-      depositAmount: parsed.depositAmount != null ? String(parsed.depositAmount) : null,
-      notes: parsed.notes ?? null,
-    })
-    .returning()
+  const result = await db.transaction(async (tx) => {
+    const [booking] = await tx
+      .insert(bookings)
+      .values({
+        tenantId: session.user.tenantId,
+        clientId: parsed.clientId,
+        eventName: parsed.eventName,
+        startDate: parsed.startDate,
+        endDate: parsed.endDate,
+        deliveryDate: parsed.deliveryDate ?? null,
+        returnDate: parsed.returnDate ?? null,
+        status: "confirmed",
+        depositAmount: parsed.depositAmount != null ? String(parsed.depositAmount) : null,
+        notes: parsed.notes ?? null,
+      })
+      .returning()
 
-  for (const item of parsed.items) {
-    await db.insert(bookingItems).values({
-      bookingId: booking.id,
-      assetId: item.assetId,
-      quantityBooked: item.quantityBooked,
-    })
-  }
+    for (const item of parsed.items) {
+      await tx.insert(bookingItems).values({
+        bookingId: booking.id,
+        assetId: item.assetId,
+        quantityBooked: item.quantityBooked,
+      })
+    }
+
+    return booking
+  })
 
   revalidatePath("/bookings")
   revalidatePath("/")
-  return { booking }
+  return { booking: result }
 }
 
 export async function createClient(input: FormData | Record<string, unknown>) {

@@ -265,7 +265,7 @@ export function ReturnCheckInClient({
           <Check className="h-10 w-10 mx-auto text-emerald-600" />
           <h1 className="text-xl font-semibold">Return Completed</h1>
           <p className="text-sm text-muted-foreground">
-            All items for {bookingEventName} have been checked in.
+            Return process completed
           </p>
         </div>
       </div>

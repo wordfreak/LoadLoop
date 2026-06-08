@@ -26,9 +26,10 @@ Known gaps (documented, not hidden):
 
 ## Damage Photos
 
-- Staff damage photos use client-side FileReader (base64 data URL), passed to server action
-- For production use, Cloudinary or object storage integration replaces base64 storage
-- Authenticated asset photo uploads use the `/api/upload` endpoint with owner auth
+- Staff damage photos upload via `POST /api/job/[token]/upload`, a token-scoped public endpoint
+- If Cloudinary env vars are configured, photos upload to Cloudinary CDN with auto-optimization and tenant-scoped folders
+- If Cloudinary is not configured, photos are stored as base64 data URLs (demo mode only)
+- The authenticated `/api/upload` route serves owner/admin asset photo uploads (currently base64, Cloudinary planned)
 
 ## Environment Variables
 

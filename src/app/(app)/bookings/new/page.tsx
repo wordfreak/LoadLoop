@@ -28,7 +28,8 @@ export default async function NewBookingPage() {
         eq(assets.tenantId, tenantId),
         not(eq(assets.status, "damaged")),
         not(eq(assets.status, "missing")),
-        not(eq(assets.status, "retired"))
+        not(eq(assets.status, "retired")),
+        not(eq(assets.status, "needs_inspection"))
       )
     )
 

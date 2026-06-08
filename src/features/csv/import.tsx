@@ -367,7 +367,7 @@ export function CsvImport() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Drop your CSV, TSV, or tab-delimited file here. The system
+          Drop your CSV or TSV file here. The system
           automatically detects columns and imports everything at once.
         </p>
         <p className="text-xs text-muted-foreground">

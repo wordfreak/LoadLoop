@@ -29,7 +29,7 @@
 2. **Asset Register** — searchable, filterable, photo + QR + movement timeline
 3. **Booking Creation** — client, dates, assets with conflict detection
 4. **Booking Conflict Detection** — date-range overlap check on serialized assets
-5. **Mobile Picking List** — scan QR or tap, two sections (high-value / bulk)
+5. **Mobile Picking List** — tap items (high-value / bulk), QR labels generated and ready for future scanning
 6. **WhatsApp Booking Links** — no-login links for staff, valid for booking duration + 3 days
 7. **Check-Out Flow** — per-item confirm loaded, optional condition photo
 8. **Check-In / Return Flow** — Good / Damaged / Missing / Needs Inspection
@@ -45,7 +45,7 @@
 1. Owner opens dashboard, sees 4 overdue, $14.2k value at risk, 2 damaged blocked
 2. Creates a booking, system catches double-booking conflict
 3. Generates picking list → WhatsApp link to warehouse guy
-4. Phone: scan projector, tap items, 6 of 9 confirmed
+4. Phone: tap items, tick boxes, see progress bar
 5. Return day: tap Good × 3, tap Damaged on screen → photo → "cracked corner"
 6. Dashboard updates: damage report, asset blocked, value at risk recalculated
 

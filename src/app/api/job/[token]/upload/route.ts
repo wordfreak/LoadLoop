@@ -85,12 +85,8 @@ export async function POST(
     const dataUrl = `data:${file.type};base64,${base64}`
 
     if (hasCloudinary()) {
-      try {
-        const cloudUrl = await uploadToCloudinary(dataUrl, link.tenantId)
-        return NextResponse.json({ url: cloudUrl })
-      } catch {
-        return NextResponse.json({ url: dataUrl })
-      }
+      const cloudUrl = await uploadToCloudinary(dataUrl, link.tenantId)
+      return NextResponse.json({ url: cloudUrl })
     }
 
     return NextResponse.json({ url: dataUrl })
