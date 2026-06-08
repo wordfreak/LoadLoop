@@ -26,25 +26,69 @@ import { Upload, FileSpreadsheet, Check } from "lucide-react"
 type ColumnMapping = Record<string, string>
 
 const COLUMN_DEFINITIONS = [
-  { key: "name", label: "Name", required: true },
+  { key: "name", label: "Equipment Name", required: true },
   { key: "serialNumber", label: "Serial Number", required: false },
-  { key: "existingCode", label: "Existing Code", required: false },
-  { key: "value", label: "Value (USD)", required: false },
+  { key: "existingCode", label: "Existing Code / Barcode", required: false },
+  { key: "value", label: "Replacement Value ($)", required: false },
   { key: "quantity", label: "Quantity", required: false },
   { key: "condition", label: "Condition", required: false },
   { key: "notes", label: "Notes", required: false },
 ]
 
+const NAME_PATTERNS = [
+  "name", "equipment", "item", "gear", "asset", "description",
+  "product", "device", "unit", "equipment name", "item name",
+  "asset name", "gear name", "product name",
+]
+
+const SERIAL_PATTERNS = [
+  "serial", "serial number", "serial #", "s/n", "serial no",
+  "serialnumber", "serialno", "serial num",
+]
+
+const CODE_PATTERNS = [
+  "existing code", "barcode", "existingcode", "existing",
+  "code", "tag", "sticker", "label", "id",
+]
+
+const VALUE_PATTERNS = [
+  "value", "cost", "price", "replacement", "replacement value",
+  "replace value", "rrp", "msrp", "purchase price", "unit price",
+  "unit cost", "amount", "$", "usd",
+]
+
+const QUANTITY_PATTERNS = [
+  "quantity", "qty", "count", "units", "total", "stock",
+  "on hand", "available", "qty on hand",
+]
+
+const CONDITION_PATTERNS = [
+  "condition", "status", "state", "quality", "grade", "health",
+]
+
+const NOTES_PATTERNS = [
+  "notes", "comments", "description", "details", "info",
+  "additional", "extra", "memo",
+]
+
+const PATTERN_MAP: Record<string, string[]> = {
+  name: NAME_PATTERNS,
+  serialNumber: SERIAL_PATTERNS,
+  existingCode: CODE_PATTERNS,
+  value: VALUE_PATTERNS,
+  quantity: QUANTITY_PATTERNS,
+  condition: CONDITION_PATTERNS,
+  notes: NOTES_PATTERNS,
+}
+
 function autoMapColumns(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {}
-  const lowerHeaders = headers.map((h) => h.toLowerCase().trim())
+  const lowerHeaders = headers.map((h) => h.toLowerCase().trim().replace(/[^a-z0-9\s]/g, ""))
 
   for (const def of COLUMN_DEFINITIONS) {
-    const idx = lowerHeaders.findIndex(
-      (h) =>
-        h === def.key ||
-        h === def.label.toLowerCase() ||
-        h === def.key.replace(/([A-Z])/g, " $1").toLowerCase()
+    const patterns = PATTERN_MAP[def.key] ?? []
+    const idx = lowerHeaders.findIndex((h) =>
+      patterns.some((p) => h === p || h.includes(p) || p.includes(h))
     )
     if (idx >= 0) {
       mapping[def.key] = headers[idx]
@@ -54,10 +98,13 @@ function autoMapColumns(headers: string[]): ColumnMapping {
   return mapping
 }
 
-function parseValue(value: string): number | undefined {
-  const cleaned = value.replace(/[$,]/g, "").trim()
-  const num = parseFloat(cleaned)
-  return isNaN(num) ? undefined : num
+function parseSpreadsheet(data: string[][]) {
+  if (data.length < 2) return null
+  const headers = data[0].map((h) => String(h).trim())
+  const rows = data.slice(1).map((row) =>
+    row.map((cell) => (cell != null ? String(cell).trim() : ""))
+  )
+  return { headers, rows }
 }
 
 export function CsvImport() {
@@ -71,45 +118,78 @@ export function CsvImport() {
   const [filename, setFilename] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  async function parse(file: File) {
+  async function parseFile(file: File) {
     setFilename(file.name)
+    const extension = file.name.split(".").pop()?.toLowerCase()
 
-    const Papa = (await import("papaparse")).default
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete(results) {
-        const data = results.data as string[][]
-        if (data.length < 2) {
-          toast.error("CSV file appears empty")
+    if (extension === "xlsx" || extension === "xls") {
+      parseExcel(file)
+    } else {
+      parseCsv(file)
+    }
+  }
+
+  function parseExcel(file: File) {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const XLSX = (await import("xlsx")).default
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+        const sheetName = workbook.SheetNames[0]
+        const sheet = workbook.Sheets[sheetName]
+        const raw: string[][] = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: "",
+        })
+
+        const result = parseSpreadsheet(raw)
+        if (!result) {
+          toast.error("Spreadsheet appears empty")
           return
         }
 
-        const fileHeaders = data[0].map((h: string) => h.trim())
-        const bodyRows = data.slice(1)
-        const autoMapping = autoMapColumns(fileHeaders)
-
-        if (!autoMapping["name"]) {
-          toast.warning(
-            'Could not auto-detect "Name" column. Please map manually.'
-          )
-        }
-
-        setHeaders(fileHeaders)
-        setRows(bodyRows.slice(0, 10))
-        setAllRows(bodyRows)
-        setMapping(autoMapping)
+        setHeaders(result.headers)
+        setRows(result.rows.slice(0, 10))
+        setAllRows(result.rows)
+        setMapping(autoMapColumns(result.headers))
         setStep("preview")
-      },
-      error() {
-        toast.error("Failed to parse CSV file")
-      },
+      } catch {
+        toast.error("Failed to read Excel file")
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  }
+
+  function parseCsv(file: File) {
+    import("papaparse").then(({ default: Papa }) => {
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        complete(results) {
+          const raw = results.data as string[][]
+          const result = parseSpreadsheet(raw)
+          if (!result) {
+            toast.error("File appears empty")
+            return
+          }
+
+          setHeaders(result.headers)
+          setRows(result.rows.slice(0, 10))
+          setAllRows(result.rows)
+          setMapping(autoMapColumns(result.headers))
+          setStep("preview")
+        },
+        error() {
+          toast.error("Failed to parse file")
+        },
+      })
     })
   }
 
   async function handleImport() {
     if (!mapping["name"]) {
-      toast.error('"Name" column is required')
+      toast.error('"Equipment Name" column is required')
       return
     }
 
@@ -128,9 +208,12 @@ export function CsvImport() {
         if (!rawValue) continue
 
         if (def.key === "value") {
-          obj[def.key] = parseValue(rawValue)
+          const cleaned = rawValue.replace(/[$,£€]/g, "").trim()
+          const num = parseFloat(cleaned)
+          if (!isNaN(num)) obj[def.key] = num
         } else if (def.key === "quantity") {
-          obj[def.key] = parseInt(rawValue, 10) || 1
+          const num = parseInt(rawValue, 10)
+          obj[def.key] = isNaN(num) ? 1 : Math.max(1, num)
         } else {
           obj[def.key] = rawValue
         }
@@ -143,7 +226,7 @@ export function CsvImport() {
       const result = await importAssets(mappedRows)
       setCount(result.count)
       setStep("done")
-      toast.success(`Imported ${result.count} assets`)
+      toast.success(`Imported ${result.count} items`)
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Import failed"
@@ -162,9 +245,14 @@ export function CsvImport() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3 text-emerald-700">
             <Check className="h-5 w-5" />
-            <p className="text-sm font-medium">
-              Successfully imported {count} assets from {filename}
-            </p>
+            <div>
+              <p className="text-sm font-medium">
+                {count} items imported from {filename}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Items are now in your asset register. QR codes generated automatically.
+              </p>
+            </div>
           </div>
           <Button variant="outline" onClick={() => setStep("upload")}>
             Import Another File
@@ -177,22 +265,24 @@ export function CsvImport() {
   if (step === "preview") {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Preview & Map Columns</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{filename}</span>
-            <Badge variant="secondary">{allRows.length} rows</Badge>
-          </div>
-
+        <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <p className="text-sm font-medium mb-2">Column Mapping</p>
-            <div className="grid grid-cols-2 gap-3">
+            <CardTitle className="text-base">Review Your Import</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Columns mapped automatically — adjust if needed
+            </p>
+          </div>
+          <Badge variant="secondary">
+            {allRows.length} items
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <p className="text-sm font-medium mb-3">Column Mapping</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               {COLUMN_DEFINITIONS.map((def) => (
                 <div key={def.key} className="flex items-center gap-2">
-                  <span className="text-sm w-32 text-muted-foreground">
+                  <span className="text-sm w-36 text-muted-foreground flex-shrink-0">
                     {def.label}
                     {def.required && (
                       <span className="text-destructive ml-0.5">*</span>
@@ -209,15 +299,16 @@ export function CsvImport() {
                       })
                     }
                   >
-                    <SelectTrigger className="flex-1">
+                    <SelectTrigger className="flex-1 h-8 text-xs">
                       <SelectValue placeholder="Skip" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(mapping[def.key] && !headers.includes(mapping[def.key] ?? "")) && (
-                        <SelectItem value={mapping[def.key] ?? ""}>
-                          {mapping[def.key]}
-                        </SelectItem>
-                      )}
+                      {mapping[def.key] &&
+                        !headers.includes(mapping[def.key] ?? "") && (
+                          <SelectItem value={mapping[def.key] ?? ""}>
+                            {mapping[def.key]}
+                          </SelectItem>
+                        )}
                       {headers.map((h) => (
                         <SelectItem key={h} value={h}>
                           {h}
@@ -232,14 +323,15 @@ export function CsvImport() {
 
           <div>
             <p className="text-sm font-medium mb-2">
-              Preview (first {Math.min(rows.length, 10)} rows)
+              Preview (showing first {Math.min(rows.length, 5)} of{" "}
+              {allRows.length} rows)
             </p>
-            <div className="rounded-md border max-h-64 overflow-auto">
+            <div className="rounded-md border max-h-48 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     {headers.map((h) => (
-                      <TableHead key={h} className="text-xs">
+                      <TableHead key={h} className="text-xs whitespace-nowrap">
                         {h}
                       </TableHead>
                     ))}
@@ -249,8 +341,11 @@ export function CsvImport() {
                   {rows.map((row, i) => (
                     <TableRow key={i}>
                       {row.map((cell, j) => (
-                        <TableCell key={j} className="text-xs">
-                          {cell}
+                        <TableCell
+                          key={j}
+                          className="text-xs whitespace-nowrap max-w-32 truncate"
+                        >
+                          {cell || "-"}
                         </TableCell>
                       ))}
                     </TableRow>
@@ -262,7 +357,7 @@ export function CsvImport() {
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep("upload")}>
-              Back
+              Choose Different File
             </Button>
             <Button
               onClick={handleImport}
@@ -270,7 +365,7 @@ export function CsvImport() {
             >
               {importing
                 ? "Importing..."
-                : `Import ${allRows.length} Assets`}
+                : `Import ${allRows.length} Items`}
             </Button>
           </div>
         </CardContent>
@@ -281,43 +376,43 @@ export function CsvImport() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">CSV Asset Import</CardTitle>
+        <CardTitle className="text-base">Import Equipment</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Upload a CSV file with your equipment list. The system will help you
-          map columns and import everything at once.
+          Drop your spreadsheet here — Excel, CSV, TSV, or tab-delimited. The
+          system automatically detects columns and imports everything at once.
         </p>
         <p className="text-xs text-muted-foreground">
-          Accepts any delimiter (commas, tabs, semicolons). First row should
-          contain column headers.
+          Auto-detects column names like "Equipment", "Serial #", "Replacement
+          Value", "Qty", etc. No manual setup needed.
         </p>
         <div
-          className="rounded-lg border-2 border-dashed p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+          className="rounded-lg border-2 border-dashed p-10 text-center cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault()
             const file = e.dataTransfer.files[0]
-            if (file) parse(file)
+            if (file) parseFile(file)
           }}
         >
-          <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+          <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-sm font-medium">
-            Drop your CSV here or click to browse
+            Drop your Excel or CSV file here
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            .csv files supported
+            .xlsx .xls .csv .tsv supported
           </p>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.tsv,.txt"
+          accept=".xlsx,.xls,.csv,.tsv,.txt"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
-            if (file) parse(file)
+            if (file) parseFile(file)
           }}
         />
       </CardContent>
