@@ -52,7 +52,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <CounterCard
           title="Assets Available"
           value={counters.assetsAvailable}
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Needs Action</CardTitle>

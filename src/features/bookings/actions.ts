@@ -134,21 +134,6 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
     })
   }
 
-  for (const item of parsed.items) {
-    const [asset] = await db
-      .select()
-      .from(assets)
-      .where(eq(assets.id, item.assetId))
-      .limit(1)
-
-    if (asset?.status === "available") {
-      await db
-        .update(assets)
-        .set({ status: "reserved", updatedAt: new Date() })
-        .where(eq(assets.id, item.assetId))
-    }
-  }
-
   revalidatePath("/bookings")
   revalidatePath("/")
   return { booking }

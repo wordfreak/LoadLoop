@@ -76,7 +76,12 @@ export default async function BookingDetailPage({
   const existingLinks = await db
     .select()
     .from(bookingLinks)
-    .where(eq(bookingLinks.bookingId, bookingId))
+    .where(
+      and(
+        eq(bookingLinks.bookingId, bookingId),
+        eq(bookingLinks.tenantId, session.user.tenantId)
+      )
+    )
 
   let pickLink = existingLinks.find((l) => l.linkType === "pick")
   let returnLink = existingLinks.find((l) => l.linkType === "return")
@@ -95,7 +100,12 @@ export default async function BookingDetailPage({
   const bookingDamages = await db
     .select()
     .from(damageReports)
-    .where(eq(damageReports.bookingId, bookingId))
+    .where(
+      and(
+        eq(damageReports.bookingId, bookingId),
+        eq(damageReports.tenantId, session.user.tenantId)
+      )
+    )
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 

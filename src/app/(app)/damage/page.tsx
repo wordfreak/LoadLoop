@@ -26,6 +26,7 @@ export default async function DamagePage() {
     description: string | null
     repairCost: number | null
     status: string
+    photoUrl: string | null
     createdAt: Date
   }> = []
 
@@ -38,6 +39,7 @@ export default async function DamagePage() {
         description: damageReports.description,
         repairCost: damageReports.repairCost,
         status: damageReports.status,
+        photoUrl: damageReports.photoUrl,
         createdAt: damageReports.createdAt,
       })
       .from(damageReports)
@@ -53,6 +55,7 @@ export default async function DamagePage() {
       description: d.description,
       repairCost: d.repairCost ? Number(d.repairCost) : null,
       status: d.status,
+      photoUrl: d.photoUrl,
       createdAt: d.createdAt,
     }))
   } catch {
@@ -76,6 +79,9 @@ export default async function DamagePage() {
               <th className="px-4 py-3 text-left text-sm font-medium">Booking</th>
               <th className="px-4 py-3 text-left text-sm font-medium">
                 Description
+              </th>
+              <th className="px-2 py-3 text-left text-sm font-medium w-12">
+                Photo
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium">
                 Repair Cost
@@ -103,6 +109,17 @@ export default async function DamagePage() {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {r.description ?? "-"}
+                  </td>
+                  <td className="px-2 py-3">
+                    {r.photoUrl ? (
+                      <img
+                        src={r.photoUrl}
+                        alt=""
+                        className="h-8 w-8 rounded object-cover"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {r.repairCost != null
