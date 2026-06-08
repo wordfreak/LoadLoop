@@ -2,15 +2,7 @@ import { auth } from "@/lib/auth/config"
 import { getDashboardData } from "@/features/dashboard/queries"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Package,
-  Truck,
-  AlertTriangle,
-  Wrench,
-  DollarSign,
-  Calendar,
-  ArrowRight,
-} from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export default async function DashboardPage() {
@@ -58,42 +50,20 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard
-          label="Available"
-          value={counters.assetsAvailable}
-          icon={Package}
-          color="emerald"
-        />
-        <StatCard
-          label="Out"
-          value={counters.assetsCurrentlyOut}
-          icon={Truck}
-          color="blue"
-        />
+        <StatCard label="Available" value={counters.assetsAvailable} />
+        <StatCard label="Out" value={counters.assetsCurrentlyOut} />
         <StatCard
           label="Overdue"
           value={counters.overdueReturns}
-          icon={AlertTriangle}
-          color="red"
+          alert
         />
         <StatCard
-          label="Damaged"
+          label="Damaged / Missing"
           value={counters.damagedBlocked}
-          icon={Wrench}
-          color="amber"
+          alert
         />
-        <StatCard
-          label="Due this week"
-          value={counters.returnsDueThisWeek}
-          icon={Calendar}
-          color="purple"
-        />
-        <StatCard
-          label="Value at risk"
-          value={`$${counters.valueAtRisk.toLocaleString()}`}
-          icon={DollarSign}
-          color="slate"
-        />
+        <StatCard label="Due this week" value={counters.returnsDueThisWeek} />
+        <StatCard label="Value at risk" value={`$${counters.valueAtRisk.toLocaleString()}`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -110,33 +80,42 @@ export default async function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   Nothing needs attention
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  All equipment is in order
-                </p>
               </div>
             ) : (
               <div className="divide-y">
-                {needsAction.slice(0, 8).map((item) => (
-                  <div
-                    key={`${item.status}-${item.id}`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">
-                        {item.eventName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {item.context}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={statusBadgeVariant[item.status] ?? "secondary"}
-                      className="ml-3 flex-shrink-0"
+                {needsAction.slice(0, 8).map((item) => {
+                  const isProblem =
+                    item.status === "damaged" ||
+                    item.status === "missing" ||
+                    item.status === "needs_inspection"
+                  return (
+                    <div
+                      key={`${item.status}-${item.id}`}
+                      className={`flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors ${
+                        isProblem
+                          ? "border-l-2 border-l-destructive/60 pl-4"
+                          : ""
+                      }`}
                     >
-                      {item.status.replace(/_/g, " ")}
-                    </Badge>
-                  </div>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {item.eventName}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.context}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          statusBadgeVariant[item.status] ?? "secondary"
+                        }
+                        className="ml-3 flex-shrink-0"
+                      >
+                        {item.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </CardContent>
@@ -147,7 +126,7 @@ export default async function DashboardPage() {
             <h2 className="text-sm font-semibold">Going Out This Week</h2>
             <Link
               href="/bookings"
-              className="text-xs text-primary hover:underline flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               View all <ArrowRight className="h-3 w-3" />
             </Link>
@@ -159,7 +138,10 @@ export default async function DashboardPage() {
                   No bookings this week
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  <Link href="/bookings/new" className="text-primary hover:underline">
+                  <Link
+                    href="/bookings/new"
+                    className="text-primary hover:underline"
+                  >
                     Create a booking
                   </Link>{" "}
                   to get started
@@ -182,7 +164,9 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <Badge
-                      variant={statusBadgeVariant[item.status] ?? "secondary"}
+                      variant={
+                        statusBadgeVariant[item.status] ?? "secondary"
+                      }
                       className="ml-3 flex-shrink-0"
                     >
                       {item.status.replace(/_/g, " ")}
@@ -201,61 +185,29 @@ export default async function DashboardPage() {
 function StatCard({
   label,
   value,
-  icon: Icon,
-  color,
+  alert,
 }: {
   label: string
   value: string | number
-  icon: React.ComponentType<{ className?: string }>
-  color: "emerald" | "blue" | "red" | "amber" | "purple" | "slate"
+  alert?: boolean
 }) {
-  const borderColors = {
-    emerald: "border-l-emerald-500",
-    blue: "border-l-blue-500",
-    red: "border-l-red-500",
-    amber: "border-l-amber-500",
-    purple: "border-l-violet-500",
-    slate: "border-l-slate-400",
-  }
-  const iconColors = {
-    emerald: "text-emerald-600",
-    blue: "text-blue-600",
-    red: "text-red-600",
-    amber: "text-amber-600",
-    purple: "text-violet-600",
-    slate: "text-slate-500",
-  }
-  const valueColors = {
-    emerald: "text-emerald-700",
-    blue: "text-blue-700",
-    red: "text-red-700",
-    amber: "text-amber-700",
-    purple: "text-violet-700",
-    slate: "text-slate-700",
-  }
-  const backgrounds = {
-    emerald: "bg-emerald-50/50",
-    blue: "bg-blue-50/40",
-    red: "bg-red-50/40",
-    amber: "bg-amber-50/40",
-    purple: "bg-violet-50/40",
-    slate: "bg-slate-50/50",
-  }
-
   return (
     <Card
-      className={`border-l-4 ${borderColors[color]} ${backgrounds[color]} hover:shadow-sm transition-shadow`}
+      className={
+        alert
+          ? "border-l-2 border-l-destructive/70 bg-destructive/5"
+          : "bg-card"
+      }
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className={`text-2xl font-bold tracking-tight ${valueColors[color]}`}>
-              {value}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-          </div>
-          <Icon className={`h-4 w-4 ${iconColors[color]} mt-0.5`} />
-        </div>
+        <p
+          className={`text-2xl font-bold tracking-tight ${
+            alert ? "text-destructive" : "text-foreground"
+          }`}
+        >
+          {value}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </CardContent>
     </Card>
   )
