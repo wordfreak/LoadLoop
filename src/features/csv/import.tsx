@@ -386,7 +386,7 @@ export function CsvImport() {
         >
           <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-sm font-medium">
-            Drop your Excel or CSV file here
+            Drop your CSV or TSV file here
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             .csv .tsv supported

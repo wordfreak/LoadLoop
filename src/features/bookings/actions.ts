@@ -85,16 +85,24 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
   if (parsed.items.length > 0) {
     const assetIds = parsed.items.map((i) => i.assetId)
     const tenantAssets = await db
-      .select({ id: assets.id })
+      .select({ id: assets.id, status: assets.status })
       .from(assets)
       .where(
         and(inArray(assets.id, assetIds), eq(assets.tenantId, tenantId))
       )
 
-    const tenantAssetIds = new Set(tenantAssets.map((a) => a.id))
+    const blockedStatuses = ["damaged", "missing", "needs_inspection", "retired"]
+    const tenantAssetMap = new Map(tenantAssets.map((a) => [a.id, a.status]))
+
     for (const item of parsed.items) {
-      if (!tenantAssetIds.has(item.assetId)) {
+      const status = tenantAssetMap.get(item.assetId)
+      if (!status) {
         throw new Error(`Asset ${item.assetId} does not belong to your company`)
+      }
+      if (blockedStatuses.includes(status)) {
+        throw new Error(
+          `Asset ${item.assetId} is ${status.replace(/_/g, " ")} and cannot be booked`
+        )
       }
     }
   }

@@ -2,7 +2,15 @@ import { auth } from "@/lib/auth/config"
 import { getDashboardData } from "@/features/dashboard/queries"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight } from "lucide-react"
+import {
+  Package,
+  Truck,
+  AlertTriangle,
+  Wrench,
+  DollarSign,
+  Calendar,
+  ArrowRight,
+} from "lucide-react"
 import Link from "next/link"
 
 export default async function DashboardPage() {
@@ -41,81 +49,49 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Equipment overview
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Equipment overview</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="Available" value={counters.assetsAvailable} />
-        <StatCard label="Out" value={counters.assetsCurrentlyOut} />
-        <StatCard
-          label="Overdue"
-          value={counters.overdueReturns}
-          alert
-        />
-        <StatCard
-          label="Damaged / Missing"
-          value={counters.damagedBlocked}
-          alert
-        />
-        <StatCard label="Due this week" value={counters.returnsDueThisWeek} />
-        <StatCard label="Value at risk" value={`$${counters.valueAtRisk.toLocaleString()}`} />
+        <StatCard label="Available" value={counters.assetsAvailable} icon={Package} color="emerald" />
+        <StatCard label="Out" value={counters.assetsCurrentlyOut} icon={Truck} color="blue" />
+        <StatCard label="Overdue" value={counters.overdueReturns} icon={AlertTriangle} color="red" alert />
+        <StatCard label="Damaged" value={counters.damagedBlocked} icon={Wrench} color="amber" alert />
+        <StatCard label="Due this week" value={counters.returnsDueThisWeek} icon={Calendar} color="violet" />
+        <StatCard label="Value at risk" value={`$${counters.valueAtRisk.toLocaleString()}`} icon={DollarSign} color="slate" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <div className="flex items-center justify-between px-6 pt-5 pb-3">
             <h2 className="text-sm font-semibold">Needs Action</h2>
-            <span className="text-xs text-muted-foreground">
-              {needsAction.length} items
-            </span>
+            <span className="text-xs text-muted-foreground">{needsAction.length} items</span>
           </div>
           <CardContent className="px-0 pb-0">
             {needsAction.length === 0 ? (
               <div className="px-6 pb-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Nothing needs attention
-                </p>
+                <p className="text-sm text-muted-foreground">Nothing needs attention</p>
+                <p className="text-xs text-muted-foreground mt-0.5">All equipment is in order</p>
               </div>
             ) : (
               <div className="divide-y">
-                {needsAction.slice(0, 8).map((item) => {
-                  const isProblem =
-                    item.status === "damaged" ||
-                    item.status === "missing" ||
-                    item.status === "needs_inspection"
-                  return (
-                    <div
-                      key={`${item.status}-${item.id}`}
-                      className={`flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors ${
-                        isProblem
-                          ? "border-l-2 border-l-destructive/60 pl-4"
-                          : ""
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">
-                          {item.eventName}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {item.context}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={
-                          statusBadgeVariant[item.status] ?? "secondary"
-                        }
-                        className="ml-3 flex-shrink-0"
-                      >
-                        {item.status.replace(/_/g, " ")}
-                      </Badge>
+                {needsAction.slice(0, 8).map((item) => (
+                  <div
+                    key={`${item.status}-${item.id}`}
+                    className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{item.eventName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.context}</p>
                     </div>
-                  )
-                })}
+                    <Badge variant={statusBadgeVariant[item.status] ?? "secondary"} className="ml-3 flex-shrink-0">
+                      {item.status.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
@@ -124,51 +100,27 @@ export default async function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between px-6 pt-5 pb-3">
             <h2 className="text-sm font-semibold">Going Out This Week</h2>
-            <Link
-              href="/bookings"
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-            >
+            <Link href="/bookings" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           <CardContent className="px-0 pb-0">
             {goingOutThisWeek.length === 0 ? (
               <div className="px-6 pb-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No bookings this week
-                </p>
+                <p className="text-sm text-muted-foreground">No bookings this week</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  <Link
-                    href="/bookings/new"
-                    className="text-primary hover:underline"
-                  >
-                    Create a booking
-                  </Link>{" "}
-                  to get started
+                  <Link href="/bookings/new" className="text-primary hover:underline">Create a booking</Link> to get started
                 </p>
               </div>
             ) : (
               <div className="divide-y">
                 {goingOutThisWeek.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/bookings/${item.id}`}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors"
-                  >
+                  <Link key={item.id} href={`/bookings/${item.id}`} className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">
-                        {item.eventName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {item.context}
-                      </p>
+                      <p className="text-sm font-medium truncate">{item.eventName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.context}</p>
                     </div>
-                    <Badge
-                      variant={
-                        statusBadgeVariant[item.status] ?? "secondary"
-                      }
-                      className="ml-3 flex-shrink-0"
-                    >
+                    <Badge variant={statusBadgeVariant[item.status] ?? "secondary"} className="ml-3 flex-shrink-0">
                       {item.status.replace(/_/g, " ")}
                     </Badge>
                   </Link>
@@ -185,29 +137,43 @@ export default async function DashboardPage() {
 function StatCard({
   label,
   value,
+  icon: Icon,
+  color,
   alert,
 }: {
   label: string
   value: string | number
+  icon: React.ComponentType<{ className?: string }>
+  color: "emerald" | "blue" | "red" | "amber" | "violet" | "slate"
   alert?: boolean
 }) {
+  const borders: Record<string, string> = {
+    emerald: "border-l-emerald-400",
+    blue: "border-l-blue-400",
+    red: "border-l-red-400",
+    amber: "border-l-amber-400",
+    violet: "border-l-violet-400",
+    slate: "border-l-slate-300",
+  }
+  const texts: Record<string, string> = {
+    emerald: "text-emerald-600",
+    blue: "text-blue-600",
+    red: "text-red-600",
+    amber: "text-amber-600",
+    violet: "text-violet-600",
+    slate: "text-slate-600",
+  }
+
   return (
-    <Card
-      className={
-        alert
-          ? "border-l-2 border-l-destructive/60 bg-destructive/5"
-          : "border-l-2 border-l-primary/40"
-      }
-    >
+    <Card className={`border-l-2 ${borders[color]}`}>
       <CardContent className="p-4">
-        <p
-          className={`text-2xl font-bold tracking-tight ${
-            alert ? "text-destructive" : "text-foreground"
-          }`}
-        >
-          {value}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className={`text-2xl font-bold tracking-tight ${texts[color]}`}>{value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+          </div>
+          <Icon className={`h-4 w-4 ${texts[color]} opacity-60 mt-0.5`} />
+        </div>
       </CardContent>
     </Card>
   )
