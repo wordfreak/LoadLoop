@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 const proxy = auth((req) => {
   const { pathname } = req.nextUrl
 
-  const publicPaths = ["/login", "/j/", "/api/auth/", "/api/qr"]
+  const publicPaths = ["/login", "/j/", "/api/auth/", "/api/qr", "/api/job/"]
   const isPublic = publicPaths.some((p) => pathname.startsWith(p))
 
   if (!req.auth && !isPublic) {

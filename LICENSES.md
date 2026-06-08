@@ -22,18 +22,12 @@
 | lucide-react | ISC | Icons |
 | sonner | MIT | Toast notifications |
 | next-themes | MIT | Theme management |
-| xlsx | Apache-2.0 | Excel/Spreadsheet parsing |
 | tsx | MIT | TypeScript executor (dev) |
 | eslint | MIT | Linter (dev) |
 | eslint-config-next | MIT | Next.js ESLint config |
-| vercel | Apache-2.0 | Deployment CLI (dev tool, not runtime dep) |
 
 ## Vulnerability Notes
 
-`xlsx` (SheetJS) v0.18.5 has a known prototype pollution advisory (CVE-2023-30533) with no fix available. This package is used for Excel/Spreadsheet file parsing during CSV import and is only accessible to authenticated admin users. The risk is limited to:
-- Processing of user-uploaded Excel files by authenticated admins
-- No external exposure through public pages or staff links
-
-Mitigation: file size limits, image-only validation on upload routes, and a migration path to alternative parsers if CVE is resolved or a maintained fork becomes available.
-
 All core dependencies (Next.js, Drizzle, NextAuth, React, Tailwind, shadcn/ui) are MIT, Apache-2.0, or ISC licensed. No GPL/AGPL code is used in the application layer.
+
+CSV import uses Papa Parse (MIT) for parsing. Only CSV/TSV formats are supported. Excel support was removed to eliminate a known prototype pollution vulnerability in the xlsx package.

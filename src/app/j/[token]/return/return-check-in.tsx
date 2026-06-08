@@ -23,9 +23,10 @@ type ItemProps = {
 }
 
 type ItemStateDetail = {
-  state: "good" | "damaged" | "missing" | "needs_inspection"
+  state: "unchecked" | "good" | "damaged" | "missing" | "needs_inspection"
   note?: string
   photoUrl?: string
+  repairCost?: number
 }
 
 type ItemStates = Record<number, ItemStateDetail>
@@ -56,7 +57,7 @@ export function ReturnCheckInClient({
   const [itemStates, setItemStates] = useState<ItemStates>(() => {
     const initial: ItemStates = {}
     for (const item of items) {
-      initial[item.id] = { state: "good" }
+      initial[item.id] = { state: "unchecked" }
     }
     return initial
   })
@@ -66,6 +67,7 @@ export function ReturnCheckInClient({
   const [activeItem, setActiveItem] = useState<number | null>(null)
   const [damageNote, setDamageNote] = useState("")
   const [damagePhotoUrl, setDamagePhotoUrl] = useState("")
+  const [repairCost, setRepairCost] = useState("")
   const [photoUploading, setPhotoUploading] = useState(false)
 
   function setItemState(
@@ -86,6 +88,7 @@ export function ReturnCheckInClient({
     setActiveItem(id)
     setDamageNote("")
     setDamagePhotoUrl("")
+    setRepairCost("")
     setItemStates((prev) => ({
       ...prev,
       [id]: { state, note: "", photoUrl: "" },
@@ -95,18 +98,26 @@ export function ReturnCheckInClient({
   async function handlePhotoUpload(file: File) {
     setPhotoUploading(true)
     try {
-      const reader = new FileReader()
-      reader.onload = () => {
-        setDamagePhotoUrl(reader.result as string)
-        setPhotoUploading(false)
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch(`/api/job/${token}/upload`, {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Upload failed")
       }
-      reader.onerror = () => {
-        toast.error("Failed to read photo")
-        setPhotoUploading(false)
-      }
-      reader.readAsDataURL(file)
-    } catch {
-      toast.error("Failed to process photo")
+
+      setDamagePhotoUrl(result.url)
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to upload photo"
+      )
+    } finally {
       setPhotoUploading(false)
     }
   }
@@ -132,6 +143,7 @@ export function ReturnCheckInClient({
           state: "damaged",
           note: damageNote.trim(),
           photoUrl: damagePhotoUrl,
+          repairCost: repairCost ? parseFloat(repairCost) : undefined,
         },
       }))
       setActiveItem(null)
@@ -155,10 +167,10 @@ export function ReturnCheckInClient({
 
   function cancelDamageForm() {
     if (activeItem == null) return
-    setItemStates((prev) => ({
-      ...prev,
-      [activeItem]: { state: "good" },
-    }))
+      setItemStates((prev) => ({
+        ...prev,
+        [activeItem]: { state: "unchecked" },
+      }))
     setActiveItem(null)
     setDamageNote("")
     setDamagePhotoUrl("")
@@ -180,6 +192,10 @@ export function ReturnCheckInClient({
 
     for (const item of items) {
       const state = itemStates[item.id]
+      if (!state || state.state === "unchecked") {
+        toast.error(`${item.assetName}: please mark as Good, Damaged, Missing, or Inspect`)
+        return
+      }
       if (state.state === "damaged") {
         if (!state.note || state.note.trim().length === 0) {
           toast.error(`${item.assetName}: damage description is required`)
@@ -196,20 +212,29 @@ export function ReturnCheckInClient({
 
     setSubmitting(true)
     try {
-      const cleaned = { ...itemStates }
-      for (const [id, detail] of Object.entries(cleaned)) {
-        if (detail.state === "damaged" && detail.photoUrl) {
-          cleaned[Number(id)] = { ...detail }
+      const checked: Record<
+        number,
+        { state: "good" | "damaged" | "missing" | "needs_inspection"; note?: string; photoUrl?: string; repairCost?: number }
+      > = {}
+
+      for (const [id, detail] of Object.entries(itemStates)) {
+        if (detail.state !== "unchecked") {
+          checked[Number(id)] = {
+            state: detail.state,
+            note: detail.note,
+            photoUrl: detail.photoUrl,
+            repairCost: detail.repairCost,
+          }
         }
       }
 
-      await completeReturnCheckIn(token, cleaned, staffName)
+      await completeReturnCheckIn(token, checked, staffName)
 
       let good = 0
       let damaged = 0
       let missing = 0
       let inspection = 0
-      for (const detail of Object.values(cleaned)) {
+      for (const detail of Object.values(itemStates)) {
         if (detail.state === "good") good++
         else if (detail.state === "damaged") damaged++
         else if (detail.state === "missing") missing++
@@ -272,8 +297,10 @@ export function ReturnCheckInClient({
             isDamage={itemStates[activeItem].state === "damaged"}
             note={damageNote}
             photoUrl={damagePhotoUrl}
+            repairCost={repairCost}
             uploading={photoUploading}
             onNoteChange={setDamageNote}
+            onRepairCostChange={setRepairCost}
             onPhotoSelect={handlePhotoUpload}
             onPhotoClear={() => setDamagePhotoUrl("")}
             onConfirm={confirmDamageOrMissing}
@@ -286,7 +313,56 @@ export function ReturnCheckInClient({
 
         {items.map((item) => {
           const itemState = itemStates[item.id]
+          const isUnchecked = !itemState || itemState.state === "unchecked"
           const isGood = itemState.state === "good"
+
+          if (isUnchecked) {
+            return (
+              <Card key={item.id}>
+                <CardContent className="p-3">
+                  <p className="text-sm font-medium mb-3">{item.assetName}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => setItemState(item.id, "good")}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Good
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 border-amber-200 text-amber-700 hover:bg-amber-50"
+                      onClick={() => setItemState(item.id, "damaged")}
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-1" />
+                      Damaged
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => setItemState(item.id, "missing")}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Missing
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 border-gray-200 text-gray-600 hover:bg-gray-50"
+                      onClick={() => setItemState(item.id, "needs_inspection")}
+                    >
+                      <HelpCircle className="h-4 w-4 mr-1" />
+                      Inspect
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          }
 
           return (
             <Card key={item.id}>

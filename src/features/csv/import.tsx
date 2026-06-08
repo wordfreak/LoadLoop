@@ -27,6 +27,7 @@ type ColumnMapping = Record<string, string>
 
 const COLUMN_DEFINITIONS = [
   { key: "name", label: "Equipment Name", required: true },
+  { key: "category", label: "Category", required: false },
   { key: "serialNumber", label: "Serial Number", required: false },
   { key: "existingCode", label: "Existing Code / Barcode", required: false },
   { key: "value", label: "Replacement Value ($)", required: false },
@@ -71,8 +72,14 @@ const NOTES_PATTERNS = [
   "additional", "extra", "memo",
 ]
 
+const CATEGORY_PATTERNS = [
+  "category", "type", "group", "class", "department", "section",
+  "equipment type", "asset type", "item type",
+]
+
 const PATTERN_MAP: Record<string, string[]> = {
   name: NAME_PATTERNS,
+  category: CATEGORY_PATTERNS,
   serialNumber: SERIAL_PATTERNS,
   existingCode: CODE_PATTERNS,
   value: VALUE_PATTERNS,
@@ -120,45 +127,7 @@ export function CsvImport() {
 
   async function parseFile(file: File) {
     setFilename(file.name)
-    const extension = file.name.split(".").pop()?.toLowerCase()
-
-    if (extension === "xlsx" || extension === "xls") {
-      parseExcel(file)
-    } else {
-      parseCsv(file)
-    }
-  }
-
-  function parseExcel(file: File) {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      try {
-        const XLSX = (await import("xlsx")).default
-        const data = new Uint8Array(e.target?.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: "array" })
-        const sheetName = workbook.SheetNames[0]
-        const sheet = workbook.Sheets[sheetName]
-        const raw: string[][] = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: "",
-        })
-
-        const result = parseSpreadsheet(raw)
-        if (!result) {
-          toast.error("Spreadsheet appears empty")
-          return
-        }
-
-        setHeaders(result.headers)
-        setRows(result.rows.slice(0, 10))
-        setAllRows(result.rows)
-        setMapping(autoMapColumns(result.headers))
-        setStep("preview")
-      } catch {
-        toast.error("Failed to read Excel file")
-      }
-    }
-    reader.readAsArrayBuffer(file)
+    parseCsv(file)
   }
 
   function parseCsv(file: File) {
@@ -393,8 +362,8 @@ export function CsvImport() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Drop your spreadsheet here — Excel, CSV, TSV, or tab-delimited. The
-          system automatically detects columns and imports everything at once.
+          Drop your CSV, TSV, or tab-delimited file here. The system
+          automatically detects columns and imports everything at once.
         </p>
         <p className="text-xs text-muted-foreground">
           Auto-detects column names like Equipment, Serial #, Replacement
@@ -415,13 +384,13 @@ export function CsvImport() {
             Drop your Excel or CSV file here
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            .xlsx .xls .csv .tsv supported
+            .csv .tsv supported
           </p>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xlsx,.xls,.csv,.tsv,.txt"
+          accept=".csv,.tsv,.txt"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]

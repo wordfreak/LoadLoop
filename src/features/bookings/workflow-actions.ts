@@ -138,6 +138,7 @@ export async function completeReturnCheckIn(
       state: "good" | "damaged" | "missing" | "needs_inspection"
       note?: string
       photoUrl?: string
+      repairCost?: number
     }
   >,
   performedBy: string
@@ -190,6 +191,9 @@ export async function completeReturnCheckIn(
     if (state.state === "damaged") {
       if (!state.note || state.note.trim().length === 0) {
         throw new Error(`Damage description required for item ${item.id}`)
+      }
+      if (!state.photoUrl || state.photoUrl.trim().length === 0) {
+        throw new Error(`Damage photo required for item ${item.id}`)
       }
     }
 
@@ -316,6 +320,7 @@ export async function completeReturnCheckIn(
           bookingId,
           photoUrl: state.photoUrl ?? "",
           description: state.note ?? null,
+          repairCost: state.repairCost != null ? String(state.repairCost) : null,
           status: "pending",
           reportedBy: performedBy,
         })

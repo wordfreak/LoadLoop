@@ -118,6 +118,24 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
     .orderBy(desc(damageReports.createdAt))
     .limit(5)
 
+  const problemAssets = await db
+    .select({
+      id: assets.id,
+      name: assets.name,
+      status: assets.status,
+    })
+    .from(assets)
+    .where(
+      and(
+        eq(assets.tenantId, tenantId),
+        or(
+          eq(assets.status, "missing"),
+          eq(assets.status, "needs_inspection")
+        )
+      )
+    )
+    .limit(5)
+
   const goingOutRows = await db
     .select({
       id: bookings.id,
@@ -168,6 +186,17 @@ export async function getDashboardData(tenantId: number): Promise<DashboardData>
         context: row.description
           ? `Damage — ${row.description.slice(0, 60)}`
           : "Pending damage report",
+      })),
+      ...problemAssets.map((row) => ({
+        id: row.id,
+        eventName: row.name,
+        status: row.status,
+        startDate: new Date().toISOString().split("T")[0],
+        returnDate: null,
+        context:
+          row.status === "missing"
+            ? "Missing — needs investigation"
+            : "Needs inspection",
       })),
     ],
     goingOutThisWeek: goingOutRows.map((row) => ({
