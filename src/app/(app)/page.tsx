@@ -105,9 +105,10 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground">No bookings this week</p>
             ) : (
               goingOutThisWeek.map((item) => (
-                <div
+                <Link
                   key={item.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  href={`/bookings/${item.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                 >
                   <div>
                     <p className="text-sm font-medium">{item.eventName}</p>
@@ -116,7 +117,7 @@ export default async function DashboardPage() {
                   <Badge className={statusBadges[item.status] ?? ""}>
                     {item.status}
                   </Badge>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
