@@ -56,3 +56,11 @@
 - [ ] Cloudinary production photo storage (keys needed)
 - [ ] Overdue detection email notifications
 - [ ] Demo video recording
+
+## Future: LoadLoop Assistant
+- [ ] Owner daily briefing (rule-based summary of risks, overdue, damaged, missing)
+- [ ] Booking summary (plain-English overview of a booking's status)
+- [ ] WhatsApp message drafting for client follow-ups on damage/missing items
+- [ ] Risk detection (flag items needing inspection, overdue returns, availability gaps)
+- [ ] CSV column mapping assistance during import
+- [ ] Read-only assistant — summarizes and suggests, never silently acts
