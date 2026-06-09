@@ -162,7 +162,7 @@ export function NewBookingForm({
             <div className="space-y-2">
               <Label htmlFor="client">Client</Label>
               <div className="flex gap-2">
-                <Select value={clientId} onValueChange={(v) => { setClientId(v ?? ""); setAddingClient(false) }} disabled={addingClient}>
+                <Select key={clientId} value={clientId} onValueChange={(v) => { setClientId(v ?? ""); setAddingClient(false) }} disabled={addingClient}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
