@@ -26,6 +26,8 @@ export function PickingListClient({
   token,
   bookingEventName,
   bookingStatus,
+  bookingDeliveryDate,
+  bookingReturnDate,
   clientName,
   items,
   alreadyDispatched,
@@ -34,6 +36,8 @@ export function PickingListClient({
   token: string
   bookingEventName: string
   bookingStatus: string
+  bookingDeliveryDate: string | null
+  bookingReturnDate: string | null
   clientName: string | null
   items: ItemProps[]
   alreadyDispatched: boolean
@@ -77,6 +81,7 @@ export function PickingListClient({
   const [submitted, setSubmitted] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [newlySelected, setNewlySelected] = useState<Set<number>>(new Set())
+  const [markAllClicked, setMarkAllClicked] = useState(false)
 
   const highValueItems = items.filter((i) => i.isHighValue)
   const bulkItems = items.filter((i) => !i.isHighValue)
@@ -266,6 +271,13 @@ export function PickingListClient({
           <div>
             <h1 className="text-lg font-semibold">{bookingEventName}</h1>
             <p className="text-sm text-muted-foreground">{clientName}</p>
+            {(bookingDeliveryDate || bookingReturnDate) && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {bookingDeliveryDate && `Deliver: ${bookingDeliveryDate}`}
+                {bookingDeliveryDate && bookingReturnDate && " — "}
+                {bookingReturnDate && `Return: ${bookingReturnDate}`}
+              </p>
+            )}
           </div>
           <Badge>{bookingStatus}</Badge>
         </div>
@@ -375,16 +387,24 @@ export function PickingListClient({
           </div>
         ) : (
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                const allIds = items.map((i) => i.id)
-                setPackedItems(new Set(allIds))
-              }}
-            >
-              Mark All Packed
-            </Button>
+            {markAllClicked ? (
+              <div className="flex gap-3 w-full">
+                <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setMarkAllClicked(false)}>
+                  Cancel
+                </Button>
+                <Button className="flex-1 h-12 rounded-xl font-medium" onClick={() => {
+                  const allIds = items.map((i) => i.id)
+                  setPackedItems(new Set(allIds))
+                  setMarkAllClicked(false)
+                }}>
+                  Yes, Mark All
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setMarkAllClicked(true)}>
+                Mark All Packed
+              </Button>
+            )}
             <Button
               className="flex-1"
               disabled={submitting || confirmedCount === 0}

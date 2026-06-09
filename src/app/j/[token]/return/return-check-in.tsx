@@ -36,11 +36,15 @@ export function ReturnCheckInClient({
   token,
   bookingEventName,
   bookingStatus,
+  bookingDeliveryDate,
+  bookingReturnDate,
   items,
 }: {
   token: string
   bookingEventName: string
   bookingStatus: string
+  bookingDeliveryDate: string | null
+  bookingReturnDate: string | null
   items: ItemProps[]
 }) {
   const [staffName, setStaffName] = useState(() => {
@@ -338,6 +342,13 @@ export function ReturnCheckInClient({
           <div>
             <h1 className="text-lg font-semibold">{bookingEventName}</h1>
             <p className="text-sm text-muted-foreground">Return Check-In</p>
+            {(bookingDeliveryDate || bookingReturnDate) && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {bookingDeliveryDate && `Deliver: ${bookingDeliveryDate}`}
+                {bookingDeliveryDate && bookingReturnDate && " — "}
+                {bookingReturnDate && `Return: ${bookingReturnDate}`}
+              </p>
+            )}
           </div>
           <Badge>{bookingStatus}</Badge>
         </div>
@@ -371,6 +382,7 @@ export function ReturnCheckInClient({
             key={item.id}
             itemId={item.id}
             assetName={item.assetName}
+            quantityBooked={item.quantityBooked}
             itemState={
               itemStates[item.id] ?? { state: "unchecked" }
             }

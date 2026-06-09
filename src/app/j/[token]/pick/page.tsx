@@ -36,6 +36,8 @@ export default async function PickPage({
       token={token}
       bookingEventName={data.booking.eventName}
       bookingStatus={data.booking.status}
+      bookingDeliveryDate={data.booking.deliveryDate}
+      bookingReturnDate={data.booking.returnDate}
       clientName={data.client?.name ?? null}
       items={sanitizedItems}
       alreadyDispatched={allCheckedOut}

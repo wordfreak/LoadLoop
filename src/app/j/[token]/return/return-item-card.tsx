@@ -14,11 +14,13 @@ type ItemStateDetail = {
 export function ReturnItemCard({
   itemId,
   assetName,
+  quantityBooked,
   itemState,
   onSetState,
 }: {
   itemId: number
   assetName: string
+  quantityBooked: number
   itemState: ItemStateDetail
   onSetState: (
     id: number,
@@ -32,7 +34,12 @@ export function ReturnItemCard({
     return (
       <Card>
         <CardContent className="p-3">
-          <p className="text-sm font-medium mb-3">{assetName}</p>
+          <p className="text-sm font-medium mb-3">
+            {assetName}
+            {quantityBooked > 1 && (
+              <span className="text-xs text-muted-foreground ml-1">×{quantityBooked}</span>
+            )}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"

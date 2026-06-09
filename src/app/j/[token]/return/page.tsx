@@ -29,6 +29,8 @@ export default async function ReturnPage({
       token={token}
       bookingEventName={data.booking.eventName}
       bookingStatus={data.booking.status}
+      bookingDeliveryDate={data.booking.deliveryDate}
+      bookingReturnDate={data.booking.returnDate}
       items={sanitizedItems}
     />
   )
