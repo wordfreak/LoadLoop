@@ -3,8 +3,8 @@ import { auth, signOut } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { tenants } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
-import { headers } from "next/headers"
 import { Button } from "@/components/ui/button"
+import { NavLinks } from "./nav-links"
 import {
   LayoutDashboard,
   Package,
@@ -41,11 +41,6 @@ export default async function AppLayout({
 }) {
   const session = await auth()
   const tenant = await getTenant(session!.user.tenantId)
-  const headerList = await headers()
-  const pathname = headerList.get("x-pathname") || "/"
-
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href)
 
   return (
     <div className="flex h-screen">
@@ -56,20 +51,7 @@ export default async function AppLayout({
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-2">
-          {navigation.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                isActive(item.href)
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+          <NavLinks items={navigation} />
         </nav>
         <div className="border-t border-sidebar-border p-2">
           <form

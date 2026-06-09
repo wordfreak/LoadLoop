@@ -92,11 +92,9 @@ export function NewBookingForm({
     setSubmitting(true)
 
     try {
-      let resolvedClientId = parseInt(clientId)
-      if (resolvedClientId === 0 && newClientName.trim()) {
-        const newClient = await createClient({ name: newClientName.trim() })
-        resolvedClientId = newClient.id
-      }
+      let resolvedClientId = newClientName.trim()
+        ? (await createClient({ name: newClientName.trim() })).id
+        : parseInt(clientId)
 
       const items = Array.from(selectedAssets.entries()).map(([assetId, qty]) => ({
         assetId,
@@ -148,17 +146,23 @@ export function NewBookingForm({
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="client">Client</Label>
-              <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")}>
-                <SelectTrigger><SelectValue placeholder="Select a client" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">+ Add new client</SelectItem>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {clientId === "0" && (
-                <Input placeholder="New client name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} required />
+              <div className="flex gap-2">
+                <Select value={clientId} onValueChange={(v) => { setClientId(v ?? ""); setNewClientName("") }} disabled={!!newClientName}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => { setClientId(""); setNewClientName("") }}>
+                  + New
+                </Button>
+              </div>
+              {newClientName !== undefined && clientId === "" && (
+                <Input placeholder="New client name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} autoFocus />
               )}
             </div>
             <div className="space-y-2">
@@ -288,7 +292,7 @@ export function NewBookingForm({
           disabled={
             submitting ||
             !clientId ||
-            (clientId === "0" && !newClientName.trim()) ||
+            !clientId && !newClientName.trim() ||
             !eventName ||
             !deliveryDate ||
             !returnDate ||

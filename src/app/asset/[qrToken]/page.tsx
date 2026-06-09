@@ -38,9 +38,8 @@ export default async function PublicAssetPage({
           <Package className="h-7 w-7 text-muted-foreground" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold">{asset.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            This item belongs to
+          <p className="text-sm text-muted-foreground">
+            This equipment belongs to
           </p>
           <p className="text-xl font-bold mt-2">
             {tenant?.name ?? "a LoadLoop company"}
