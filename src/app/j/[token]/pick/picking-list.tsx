@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Check, Package } from "lucide-react"
 import { confirmPackedItems } from "@/features/bookings/workflow-actions"
+import { QrScanner } from "@/features/qr/scanner"
 import { toast } from "sonner"
 
 type ItemProps = {
@@ -61,6 +62,7 @@ export function PickingListClient({
   })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [scanning, setScanning] = useState(false)
 
   const highValueItems = items.filter((i) => i.isHighValue)
   const bulkItems = items.filter((i) => !i.isHighValue)
@@ -100,6 +102,16 @@ export function PickingListClient({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleQrScan(scannedToken: string) {
+    const item = items.find((i) => i.assetQrToken === scannedToken)
+    if (!item) {
+      toast.error("QR code not found in this packing list")
+      return
+    }
+    toggleItem(item.id)
+    toast.success(`${item.assetName} — marked as packed`)
   }
 
   if (alreadyDispatched) {
@@ -242,6 +254,8 @@ export function PickingListClient({
           />
         </div>
       </div>
+
+      <QrScanner onScan={handleQrScan} scanning={scanning} onToggle={() => setScanning((s) => !s)} />
 
       <div className="p-4 space-y-6 pb-24">
         {highValueItems.length > 0 && (

@@ -9,11 +9,13 @@ import { completeReturnCheckIn } from "@/features/bookings/workflow-actions"
 import { toast } from "sonner"
 import { DamageForm } from "./damage-form"
 import { ReturnItemCard } from "./return-item-card"
+import { QrScanner } from "@/features/qr/scanner"
 
 type ItemProps = {
   id: number
   assetId: number
   assetName: string
+  assetQrToken: string | null
   quantityBooked: number
   quantityReturned: number
   quantityDamaged: number
@@ -71,6 +73,17 @@ export function ReturnCheckInClient({
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitResult, setSubmitResult] = useState({ good: 0, damaged: 0, missing: 0, inspection: 0 })
+  const [scanning, setScanning] = useState(false)
+
+  function handleQrScan(scannedToken: string) {
+    const item = items.find((i) => i.assetQrToken === scannedToken)
+    if (!item) {
+      toast.error("QR code not found in this return")
+      return
+    }
+    setItemState(item.id, "good")
+    toast.success(`${item.assetName} — marked as good`)
+  }
   const [activeItem, setActiveItem] = useState<number | null>(null)
   const [damageNote, setDamageNote] = useState("")
   const [damagePhotoUrl, setDamagePhotoUrl] = useState("")
@@ -311,6 +324,8 @@ export function ReturnCheckInClient({
         </div>
         <div className="text-sm">{items.length} items</div>
       </div>
+
+      <QrScanner onScan={handleQrScan} scanning={scanning} onToggle={() => setScanning((s) => !s)} />
 
       <div className="p-4 space-y-3 pb-24">
         {activeItem != null && (

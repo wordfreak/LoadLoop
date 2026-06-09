@@ -16,6 +16,7 @@ export default async function ReturnPage({
     id: item.id,
     assetId: item.assetId,
     assetName: item.assetName,
+    assetQrToken: item.assetQrToken,
     quantityBooked: item.quantityBooked,
     quantityReturned: item.quantityReturned,
     quantityDamaged: item.quantityDamaged,
