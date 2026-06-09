@@ -17,7 +17,9 @@ const proxy = auth((req) => {
     return NextResponse.redirect(homeUrl)
   }
 
-  return NextResponse.next()
+  const response = NextResponse.next()
+  response.headers.set("x-pathname", pathname)
+  return response
 })
 
 export { proxy }

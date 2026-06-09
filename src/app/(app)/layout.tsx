@@ -3,6 +3,7 @@ import { auth, signOut } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { tenants } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
+import { headers } from "next/headers"
 import { Button } from "@/components/ui/button"
 import {
   LayoutDashboard,
@@ -40,10 +41,15 @@ export default async function AppLayout({
 }) {
   const session = await auth()
   const tenant = await getTenant(session!.user.tenantId)
+  const headerList = await headers()
+  const pathname = headerList.get("x-pathname") || "/"
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href)
 
   return (
     <div className="flex h-screen">
-      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col">
+      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex-col hidden md:flex">
         <div className="flex h-14 items-center border-b border-sidebar-border px-4">
           <Link href="/" className="font-semibold text-lg">
             LoadLoop
@@ -54,7 +60,11 @@ export default async function AppLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                isActive(item.href)
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              }`}
             >
               <item.icon className="h-4 w-4" />
               {item.label}
