@@ -1,8 +1,7 @@
-import { randomUUID } from "crypto"
 import { eq, and, gt, sql } from "drizzle-orm"
 
 function shortToken(): string {
-  return randomUUID().split("-")[0]
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 import { getDatabase } from "@/lib/db"
 import {
