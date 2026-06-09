@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Play, Check, Package, Truck, Camera, Shield, Zap, FileSpreadsheet, MessageCircle } from "lucide-react"
+import { ArrowRight, Play, Check, Package, Camera, Shield, Zap, FileSpreadsheet, MessageCircle } from "lucide-react"
 
 export default function LandingPage() {
   return (
@@ -47,7 +47,7 @@ function Hero() {
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">Know what left, what came back, and what needs attention.</h1>
           <p className="text-lg text-muted-foreground mt-6 leading-relaxed max-w-lg">LoadLoop turns your equipment spreadsheet into a simple mobile workflow. Staff use phone links. You see the dashboard.</p>
           <div className="flex items-center gap-4 mt-8">
-            <Link href="#demo" className="inline-flex items-center gap-2 bg-foreground text-background rounded-full px-6 py-3 text-sm font-medium hover:opacity-90"><Play className="h-4 w-4" />Watch 3-minute demo</Link>
+            <Link href="#demo" className="inline-flex items-center gap-2 bg-foreground text-background rounded-full px-6 py-3 text-sm font-medium hover:opacity-90 transition-all hover:scale-105"><Play className="h-4 w-4" />Watch 3-minute demo</Link>
             <Link href="/login" className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border hover:bg-muted/50">Try the demo <ArrowRight className="h-4 w-4" /></Link>
           </div>
         </div>
@@ -64,16 +64,23 @@ function WorkflowAnimation() {
         <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />Apex AV Rentals — Live
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-blue-50 p-3 text-center"><p className="text-xl font-bold text-blue-700">26</p><p className="text-xs text-blue-600">Available</p></div>
-        <div className="rounded-lg bg-amber-50 p-3 text-center"><p className="text-xl font-bold text-amber-700">9</p><p className="text-xs text-amber-600">Out</p></div>
-        <div className="rounded-lg bg-red-50 p-3 text-center"><p className="text-xl font-bold text-red-700">3</p><p className="text-xs text-red-600">Need action</p></div>
+        <div className="rounded-lg bg-blue-50 p-3 text-center hover:scale-105 transition-transform"><p className="text-xl font-bold text-blue-700">26</p><p className="text-xs text-blue-600">Available</p></div>
+        <div className="rounded-lg bg-amber-50 p-3 text-center hover:scale-105 transition-transform"><p className="text-xl font-bold text-amber-700">9</p><p className="text-xs text-amber-600">Out</p></div>
+        <div className="rounded-lg bg-red-50 p-3 text-center hover:scale-105 transition-transform"><p className="text-xl font-bold text-red-700">3</p><p className="text-xs text-red-600">Need action</p></div>
       </div>
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-blue-500" /><span>Sony Projector — Booked</span></div>
-        <div className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-indigo-500" /><span>Packed by Tom · 8 confirmed</span></div>
-        <div className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-amber-500" /><span>$12,400 value at risk</span></div>
-        <div className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-emerald-500" /><span>Returned: 4 good · 1 damaged</span></div>
-        <div className="flex items-center gap-3"><div className="h-3 w-3 rounded-full bg-red-500" /><span>2 items blocked · 3 need action</span></div>
+        {[
+          { color: "bg-blue-500", text: "Sony Projector — Booked", delay: "0ms" },
+          { color: "bg-indigo-500", text: "Packed by Tom · 8 confirmed", delay: "200ms" },
+          { color: "bg-amber-500", text: "$12,400 value at risk", delay: "400ms" },
+          { color: "bg-emerald-500", text: "Returned: 4 good · 1 damaged", delay: "600ms" },
+          { color: "bg-red-500", text: "2 items blocked · 3 need action", delay: "800ms" },
+        ].map((item, i) => (
+          <div key={i} className="flex items-center gap-3 opacity-0 animate-[fadeIn_0.3s_ease-out_forwards]" style={{ animationDelay: item.delay }}>
+            <div className={`h-3 w-3 rounded-full ${item.color}`} />
+            <span>{item.text}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

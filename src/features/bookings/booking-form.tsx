@@ -295,7 +295,7 @@ export function NewBookingForm({
                         }`}
                       >
                         <span>{asset.name}</span>
-                        <span className="text-xs text-muted-foreground">{asset.isBulk ? "Bulk" : selected ? "Added" : ""}</span>
+                        <span className="text-xs text-muted-foreground">{selected ? "Added" : ""}</span>
                       </button>
                     )
                   })

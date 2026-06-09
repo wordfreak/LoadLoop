@@ -23,8 +23,8 @@ const statusColors: Record<string, string> = {
   checked_out: "bg-amber-100 text-amber-700",
   returned: "bg-green-100 text-green-700",
   damaged: "bg-red-100 text-red-700",
-  missing: "bg-red-100 text-red-700",
-  needs_inspection: "bg-orange-100 text-orange-700",
+  missing: "bg-orange-100 text-orange-700",
+  needs_inspection: "bg-yellow-100 text-yellow-700",
   retired: "bg-gray-100 text-gray-500",
 }
 

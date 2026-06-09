@@ -46,10 +46,16 @@ export default async function RootPage() {
     const needsAction = dashboardData?.needsAction ?? []
     const goingOutThisWeek = dashboardData?.goingOutThisWeek ?? []
 
-    const statusBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      draft: "secondary", confirmed: "default", packed: "default", out: "default",
-      returned: "secondary", cancelled: "destructive", damaged: "destructive",
-      missing: "destructive", needs_inspection: "secondary",
+    const statusBadge: Record<string, string> = {
+      draft: "bg-gray-100 text-gray-700",
+      confirmed: "bg-blue-100 text-blue-700",
+      packed: "bg-indigo-100 text-indigo-700",
+      out: "bg-amber-100 text-amber-700",
+      returned: "bg-green-100 text-green-700",
+      cancelled: "bg-red-100 text-red-700",
+      damaged: "bg-red-100 text-red-700",
+      missing: "bg-orange-100 text-orange-700",
+      needs_inspection: "bg-yellow-100 text-yellow-700",
     }
 
     return (
@@ -107,7 +113,7 @@ export default async function RootPage() {
                       {needsAction.length === 0 ? <p className="text-sm text-muted-foreground">Nothing needs attention</p> : needsAction.slice(0, 6).map((item) => {
                         const assetStatuses = ["damaged", "missing", "needs_inspection"]
                         const link = assetStatuses.includes(item.status) ? `/assets/${item.id}` : `/bookings/${item.id}`
-                        return <Link key={`${item.status}-${item.id}`} href={link} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"><div><p className="text-sm font-medium truncate">{item.eventName}</p><p className="text-xs text-muted-foreground">{item.context}</p></div><Badge variant={statusBadgeVariant[item.status] ?? "secondary"}>{item.status.replace(/_/g, " ")}</Badge></Link>
+                        return <Link key={`${item.status}-${item.id}`} href={link} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"><div><p className="text-sm font-medium truncate">{item.eventName}</p><p className="text-xs text-muted-foreground">{item.context}</p></div><Badge className={statusBadge[item.status] ?? ""}>{item.status.replace(/_/g, " ")}</Badge></Link>
                       })}
                     </CardContent>
                   </Card>
@@ -115,7 +121,7 @@ export default async function RootPage() {
                     <CardHeader><CardTitle className="text-base">Going Out This Week</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       {goingOutThisWeek.length === 0 ? <p className="text-sm text-muted-foreground">No bookings this week</p> : goingOutThisWeek.map((item) => (
-                        <Link key={item.id} href={`/bookings/${item.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"><div><p className="text-sm font-medium truncate">{item.eventName}</p><p className="text-xs text-muted-foreground">{item.context}</p></div><Badge variant={statusBadgeVariant[item.status] ?? "secondary"}>{item.status.replace(/_/g, " ")}</Badge></Link>
+                        <Link key={item.id} href={`/bookings/${item.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"><div><p className="text-sm font-medium truncate">{item.eventName}</p><p className="text-xs text-muted-foreground">{item.context}</p></div><Badge className={statusBadge[item.status] ?? ""}>{item.status.replace(/_/g, " ")}</Badge></Link>
                       ))}
                     </CardContent>
                   </Card>
@@ -126,7 +132,7 @@ export default async function RootPage() {
         </div>
       </div>
     )
+  } else {
+    return <LandingPage />
   }
-
-  return <LandingPage />
 }
