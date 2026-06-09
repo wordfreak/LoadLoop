@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/config"
 import { getDashboardData } from "@/features/dashboard/queries"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 import {
   Package,
   Truck,
@@ -53,42 +54,12 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <CounterCard
-          title="Assets Available"
-          value={counters.assetsAvailable}
-          icon={Package}
-          variant="blue"
-        />
-        <CounterCard
-          title="Currently Out"
-          value={counters.assetsCurrentlyOut}
-          icon={Truck}
-          variant="blue"
-        />
-        <CounterCard
-          title="Overdue Returns"
-          value={counters.overdueReturns}
-          icon={AlertTriangle}
-          variant="red"
-        />
-        <CounterCard
-          title="Damaged / Missing"
-          value={counters.damagedBlocked}
-          icon={Wrench}
-          variant="red"
-        />
-        <CounterCard
-          title="Returns Due This Week"
-          value={counters.returnsDueThisWeek}
-          icon={Calendar}
-          variant="grey"
-        />
-        <CounterCard
-          title="Value At Risk"
-          value={`$${counters.valueAtRisk.toLocaleString()}`}
-          icon={DollarSign}
-          variant="grey"
-        />
+        <Link href="/assets"><CounterCard title="Assets Available" value={counters.assetsAvailable} icon={Package} variant="blue" /></Link>
+        <Link href="/bookings"><CounterCard title="Currently Out" value={counters.assetsCurrentlyOut} icon={Truck} variant="blue" /></Link>
+        <Link href="/bookings"><CounterCard title="Overdue Returns" value={counters.overdueReturns} icon={AlertTriangle} variant="red" /></Link>
+        <Link href="/damage"><CounterCard title="Damaged / Missing" value={counters.damagedBlocked} icon={Wrench} variant="red" /></Link>
+        <Link href="/bookings"><CounterCard title="Returns Due This Week" value={counters.returnsDueThisWeek} icon={Calendar} variant="grey" /></Link>
+        <CounterCard title="Value At Risk" value={`$${counters.valueAtRisk.toLocaleString()}`} icon={DollarSign} variant="grey" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -100,20 +71,27 @@ export default async function DashboardPage() {
             {needsAction.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing needs attention</p>
             ) : (
-              needsAction.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{item.eventName}</p>
-                    <p className="text-xs text-muted-foreground">{item.context}</p>
-                  </div>
-                  <Badge className={statusBadges[item.status] ?? ""}>
-                    {item.status}
-                  </Badge>
-                </div>
-              ))
+              needsAction.map((item) => {
+                const assetStatuses = ["damaged", "missing", "needs_inspection"]
+                const link = assetStatuses.includes(item.status)
+                  ? `/assets/${item.id}`
+                  : `/bookings/${item.id}`
+                return (
+                  <Link
+                    key={`${item.status}-${item.id}`}
+                    href={link}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{item.eventName}</p>
+                      <p className="text-xs text-muted-foreground">{item.context}</p>
+                    </div>
+                    <Badge className={statusBadges[item.status] ?? ""}>
+                      {item.status}
+                    </Badge>
+                  </Link>
+                )
+              })
             )}
           </CardContent>
         </Card>
