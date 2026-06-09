@@ -5,6 +5,7 @@ const proxy = auth((req) => {
   const { pathname } = req.nextUrl
 
   const publicPaths = ["/login", "/j/", "/api/auth/", "/api/qr", "/api/job/", "/asset/"]
+  if (pathname === "/" && !req.auth) return NextResponse.next()
   const isPublic = publicPaths.some((p) => pathname.startsWith(p))
 
   if (!req.auth && !isPublic) {
