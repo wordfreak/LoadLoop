@@ -7,6 +7,11 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00")
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
 const bookingStatusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
   confirmed: "bg-blue-100 text-blue-700",
@@ -115,7 +120,7 @@ export default async function BookingsPage() {
                   </td>
                   <td className="px-4 py-3 text-sm">{b.clientName}</td>
                   <td className="px-4 py-3 text-sm">
-                    {b.startDate} – {b.returnDate ?? b.endDate}
+                    {formatDate(b.startDate)} – {formatDate(b.returnDate ?? b.endDate)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge className={bookingStatusColors[b.status] ?? ""}>
