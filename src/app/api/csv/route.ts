@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
-import { assets, bookings, clients } from "@/lib/db/schema"
-import { eq } from "drizzle-orm"
+import { assets, bookings, clients, damageReports, bookingItems } from "@/lib/db/schema"
+import { eq, and } from "drizzle-orm"
 import Papa from "papaparse"
 
 function toCsv(headers: string[], rows: Record<string, unknown>[]): string {
@@ -86,6 +86,52 @@ export async function GET(request: Request) {
       }))
     )
     filename = "clients.csv"
+  }
+
+  if (table === "damage_reports") {
+    const rows = await db
+      .select()
+      .from(damageReports)
+      .where(eq(damageReports.tenantId, tenantId))
+
+    csv = toCsv(
+      ["id", "asset_id", "booking_id", "description", "repair_cost", "status", "reported_by", "created_at"],
+      rows.map((r) => ({
+        id: r.id,
+        asset_id: r.assetId,
+        booking_id: r.bookingId ?? "",
+        description: r.description ?? "",
+        repair_cost: r.repairCost ?? "",
+        status: r.status,
+        reported_by: r.reportedBy,
+        created_at: r.createdAt.toISOString(),
+      }))
+    )
+    filename = "damage_reports.csv"
+  }
+
+  if (table === "booking_items") {
+    const rows = await db
+      .select()
+      .from(bookingItems)
+      .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+      .where(eq(bookings.tenantId, tenantId))
+
+    csv = toCsv(
+      ["id", "booking_id", "asset_id", "qty_booked", "qty_packed", "qty_checked_out", "qty_returned", "qty_damaged", "qty_missing"],
+      rows.map((r) => ({
+        id: r.booking_items.id,
+        booking_id: r.booking_items.bookingId,
+        asset_id: r.booking_items.assetId,
+        qty_booked: r.booking_items.quantityBooked,
+        qty_packed: r.booking_items.quantityPacked,
+        qty_checked_out: r.booking_items.quantityCheckedOut,
+        qty_returned: r.booking_items.quantityReturned,
+        qty_damaged: r.booking_items.quantityDamaged,
+        qty_missing: r.booking_items.quantityMissing,
+      }))
+    )
+    filename = "booking_items.csv"
   }
 
   if (!filename) {

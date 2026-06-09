@@ -50,6 +50,12 @@ export default async function SettingsPage() {
             <Link href="/api/csv?table=clients">
               <Button variant="outline">Clients</Button>
             </Link>
+            <Link href="/api/csv?table=damage_reports">
+              <Button variant="outline">Damage Reports</Button>
+            </Link>
+            <Link href="/api/csv?table=booking_items">
+              <Button variant="outline">Booking Items</Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
