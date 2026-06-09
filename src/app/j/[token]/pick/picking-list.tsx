@@ -78,7 +78,12 @@ export function PickingListClient({
       return next
     })
     if (partiallyDispatched) {
-      setNewlySelected((prev) => new Set(prev).add(id))
+      setNewlySelected((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
     }
   }
 

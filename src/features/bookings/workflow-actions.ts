@@ -40,6 +40,9 @@ export async function confirmPackedItems(
   performedBy: string
 ) {
   const link = await validateStaffToken(token, "pick")
+  if (!performedBy || performedBy.trim().length === 0) {
+    throw new Error("Staff name is required")
+  }
   const db = getDatabase()
   const bookingId = link.bookingId
 
@@ -146,6 +149,9 @@ export async function completeReturnCheckIn(
   performedBy: string
 ) {
   const link = await validateStaffToken(token, "return")
+  if (!performedBy || performedBy.trim().length === 0) {
+    throw new Error("Staff name is required")
+  }
   const db = getDatabase()
   const bookingId = link.bookingId
 

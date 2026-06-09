@@ -140,7 +140,7 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
           and(
             inArray(bookingItems.assetId, bulkAssetIds),
             eq(bookings.tenantId, tenantId),
-            gte(bookings.returnDate ?? bookings.endDate, parsed.startDate),
+            gte(sql`COALESCE(${bookings.returnDate}, ${bookings.endDate})`, parsed.startDate),
             lte(bookings.startDate, parsed.endDate),
             not(eq(bookings.status, "cancelled")),
             not(eq(bookings.status, "returned"))
