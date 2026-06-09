@@ -141,7 +141,7 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
             inArray(bookingItems.assetId, bulkAssetIds),
             eq(bookings.tenantId, tenantId),
             gte(sql`COALESCE(${bookings.returnDate}, ${bookings.endDate})`, parsed.startDate),
-            lte(bookings.startDate, parsed.endDate),
+            lte(bookings.startDate, requestedEnd),
             not(eq(bookings.status, "cancelled")),
             not(eq(bookings.status, "returned"))
           )
@@ -164,10 +164,13 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
     }
   }
 
+  const requestedStart = parsed.startDate
+  const requestedEnd = parsed.returnDate ?? parsed.endDate
+
   const conflicts = await detectBookingConflicts(
     parsed.items.map((i) => i.assetId),
-    parsed.startDate,
-    parsed.endDate,
+    requestedStart,
+    requestedEnd,
     tenantId
   )
 
