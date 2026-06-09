@@ -208,6 +208,8 @@ export default async function AssetDetailPage({
             </CardContent>
           </Card>
 
+          <OwnerAssetActions assetId={assetId} currentStatus={asset.status} />
+
           {damages.length > 0 && (
             <Card>
               <CardHeader>
@@ -225,10 +227,8 @@ export default async function AssetDetailPage({
                         <span className="text-sm text-muted-foreground">
                           ${Number(d.repairCost).toLocaleString()} repair
                         </span>
-          )}
-
-          <OwnerAssetActions assetId={assetId} currentStatus={asset.status} />
-        </div>
+                      )}
+                    </div>
                     {d.description && (
                       <p className="text-sm mt-2">{d.description}</p>
                     )}
