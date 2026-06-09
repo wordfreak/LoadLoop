@@ -1,5 +1,9 @@
-import { randomUUID } from "crypto"
+import { randomBytes } from "crypto"
 import { eq, and, gt, sql } from "drizzle-orm"
+
+function shortToken(): string {
+  return randomBytes(8).toString("base64url")
+}
 import { getDatabase } from "@/lib/db"
 import {
   bookingLinks,
@@ -18,7 +22,7 @@ export async function createBookingLink(
   expiresAt: Date
 ) {
   const db = getDatabase()
-  const token = randomUUID()
+  const token = shortToken()
 
   const [link] = await db
     .insert(bookingLinks)
