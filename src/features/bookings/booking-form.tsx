@@ -192,15 +192,25 @@ export function NewBookingForm({
           </CardHeader>
           <CardContent className="space-y-4">
             {selectedAssets.size > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {Array.from(selectedAssets.entries()).map(([id, qty]) => {
                   const asset = assets.find((a) => a.id === id)
                   return (
-                    <Badge key={id} variant="secondary" className="cursor-pointer gap-1 py-1.5 pl-3 pr-1.5" onClick={() => toggleAsset(id)}>
-                      {asset?.name ?? id}
-                      {asset?.isBulk && qty > 1 && ` ×${qty}`}
-                      <X className="h-3 w-3 ml-1" />
-                    </Badge>
+                    <div key={id} className="flex items-center gap-1">
+                      <Badge variant="secondary" className="cursor-pointer gap-1 py-1.5 pl-3 pr-1.5" onClick={() => toggleAsset(id)}>
+                        {asset?.name ?? id}
+                        <X className="h-3 w-3 ml-1" />
+                      </Badge>
+                      {asset?.isBulk && (
+                        <input
+                          type="number"
+                          min="1"
+                          value={qty}
+                          onChange={(e) => setAssetQuantity(id, parseInt(e.target.value) || 1)}
+                          className="w-16 h-7 text-xs border rounded px-1.5"
+                        />
+                      )}
+                    </div>
                   )
                 })}
               </div>

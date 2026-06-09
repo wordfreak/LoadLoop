@@ -12,7 +12,7 @@ export const createBookingSchema = z.object({
   items: z.array(
     z.object({
       assetId: z.number(),
-      quantityBooked: z.number().int().min(0).default(1),
+      quantityBooked: z.number().int().min(1).default(1),
     })
   ),
 })

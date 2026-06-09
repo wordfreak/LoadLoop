@@ -36,7 +36,7 @@
 - [x] "Mark All Packed" / "Mark All Good" bulk actions
 - [x] Asset auto-blocking when damaged
 - [x] Movement history timeline
-- [x] New Booking page with conflict detection (bulk + individual, quantity input)
+- [x] New Booking page with conflict detection (individual + bulk with quantity input)
 - [x] Staff links: server-side data fetching, sanitized props
 - [x] Owner recovery: mark dispatched, mark all returned, correct status, late damage
 - [x] DB transactions on workflow mutations

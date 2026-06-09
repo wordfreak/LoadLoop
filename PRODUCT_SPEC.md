@@ -51,7 +51,7 @@
 
 ## Tech Stack
 
-- **Framework:** Next.js 14 App Router, TypeScript strict
+- **Framework:** Next.js 16 App Router, TypeScript strict
 - **UI:** Tailwind CSS + shadcn/ui
 - **Database:** Neon Postgres + Drizzle ORM
 - **Auth:** NextAuth.js v5 (credentials: email/password for owners)
@@ -59,7 +59,7 @@
 - **Tables:** TanStack Table
 - **CSV:** Papa Parse
 - **QR Generation:** qrcode
-- **QR Scanning:** @zxing/browser
+- **QR Scanning:** planned (tap-first workflow for v1 demo)
 - **Images:** Cloudinary
 - **PDF:** @react-pdf/renderer (v2)
 - **Email:** Resend (v2)

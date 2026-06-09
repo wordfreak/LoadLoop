@@ -42,7 +42,6 @@ Known gaps (documented, not hidden):
 
 - No rate limiting on login, upload, or server actions
 - No brute-force protection on credentials
-- CSV import processes files without row-level sandboxing beyond tenant scope
-- Excel parsing (xlsx) has a known prototype pollution advisory (CVE-2023-30533); only accessible to authenticated admins
+- CSV import processes files within tenant scope
 - Staff links are reusable until expiry; no single-use enforcement
 - `usedBy` on booking links is updated on return completion only, not on first open

@@ -85,23 +85,38 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
   if (parsed.items.length > 0) {
     const assetIds = parsed.items.map((i) => i.assetId)
     const tenantAssets = await db
-      .select({ id: assets.id, status: assets.status })
+      .select({
+        id: assets.id,
+        status: assets.status,
+        isBulk: assets.isBulk,
+        totalQuantity: assets.quantity,
+      })
       .from(assets)
       .where(
         and(inArray(assets.id, assetIds), eq(assets.tenantId, tenantId))
       )
 
     const blockedStatuses = ["damaged", "missing", "needs_inspection", "retired"]
-    const tenantAssetMap = new Map(tenantAssets.map((a) => [a.id, a.status]))
+    const tenantAssetMap = new Map(tenantAssets.map((a) => [a.id, a]))
 
     for (const item of parsed.items) {
-      const status = tenantAssetMap.get(item.assetId)
-      if (!status) {
+      const asset = tenantAssetMap.get(item.assetId)
+      if (!asset) {
         throw new Error(`Asset ${item.assetId} does not belong to your company`)
       }
-      if (blockedStatuses.includes(status)) {
+      if (blockedStatuses.includes(asset.status)) {
         throw new Error(
-          `Asset ${item.assetId} is ${status.replace(/_/g, " ")} and cannot be booked`
+          `Asset ${item.assetId} is ${asset.status.replace(/_/g, " ")} and cannot be booked`
+        )
+      }
+      if (!asset.isBulk && item.quantityBooked !== 1) {
+        throw new Error(
+          `Asset ${item.assetId} is not a bulk item — quantity must be 1`
+        )
+      }
+      if (asset.isBulk && item.quantityBooked > asset.totalQuantity) {
+        throw new Error(
+          `Only ${asset.totalQuantity} available for ${item.assetId}, requested ${item.quantityBooked}`
         )
       }
     }
