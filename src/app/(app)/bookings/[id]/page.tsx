@@ -163,20 +163,16 @@ export default async function BookingDetailPage({
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-3">
-        {pickLink && (
-          <CopyLinkButton
-            url={`${appUrl}/j/${pickLink.token}/pick`}
-            label="Copy Pick Link"
-          />
-        )}
-        {returnLink && (
-          <CopyLinkButton
-            url={`${appUrl}/j/${returnLink.token}/return`}
-            label="Copy Return Link"
-          />
-        )}
-      </div>
+      {booking.status !== "returned" && booking.status !== "cancelled" && (
+        <div className="flex flex-wrap gap-3">
+          {pickLink && (
+            <CopyLinkButton url={`${appUrl}/j/${pickLink.token}/pick`} label="Copy Pick Link" />
+          )}
+          {returnLink && (
+            <CopyLinkButton url={`${appUrl}/j/${returnLink.token}/return`} label="Copy Return Link" />
+          )}
+        </div>
+      )}
 
       <OwnerActions
         bookingId={booking.id}

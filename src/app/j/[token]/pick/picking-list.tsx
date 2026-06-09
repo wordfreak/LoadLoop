@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,8 +58,21 @@ export function PickingListClient({
         initial.add(item.id)
       }
     }
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`packed_${token}`)
+      if (saved) {
+        try {
+          const ids = JSON.parse(saved) as number[]
+          ids.forEach((id) => initial.add(id))
+        } catch {}
+      }
+    }
     return initial
   })
+
+  useEffect(() => {
+    localStorage.setItem(`packed_${token}`, JSON.stringify(Array.from(packedItems)))
+  }, [packedItems, token])
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [scanning, setScanning] = useState(false)
@@ -114,7 +127,8 @@ export function PickingListClient({
   }
 
   function handleQrScan(scannedToken: string) {
-    const item = items.find((i) => i.assetQrToken === scannedToken)
+    const clean = scannedToken.trim()
+    const item = items.find((i) => i.assetQrToken === clean)
     if (!item) {
       toast.error("QR code not found in this packing list")
       return

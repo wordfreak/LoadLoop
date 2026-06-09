@@ -57,8 +57,14 @@ export function QrScanner({
           },
           () => {}
         )
-      } catch {
-        onToggleRef.current()
+      } catch (err) {
+        if (mounted) {
+          const message = err instanceof Error ? err.message : ""
+          if (message.includes("permission") || message.includes("NotAllowed")) {
+            alert("Camera access denied. Please allow camera access in your browser settings.")
+          }
+          onToggleRef.current()
+        }
       }
     }
 

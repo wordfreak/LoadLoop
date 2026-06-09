@@ -71,12 +71,14 @@ export function ReturnCheckInClient({
     return initial
   })
   const [submitting, setSubmitting] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submitResult, setSubmitResult] = useState({ good: 0, damaged: 0, missing: 0, inspection: 0 })
   const [scanning, setScanning] = useState(false)
 
   function handleQrScan(scannedToken: string) {
-    const item = items.find((i) => i.assetQrToken === scannedToken)
+    const clean = scannedToken.trim()
+    const item = items.find((i) => i.assetQrToken === clean)
     if (!item) {
       toast.error("QR code not found in this return")
       return
@@ -219,21 +221,29 @@ export function ReturnCheckInClient({
       return
     }
 
-    for (const item of items) {
-      const state = itemStates[item.id]
-      if (!state || state.state === "unchecked") {
-        toast.error(`${item.assetName}: please mark as Good, Damaged, Missing, or Inspect`)
+    if (!confirming) {
+      const unchecked = Object.values(itemStates).filter((s) => s.state === "unchecked").length
+      if (unchecked > 0) {
+        toast.error(`${unchecked} item(s) not yet checked`)
         return
       }
+      setConfirming(true)
+      return
+    }
+
+    for (const item of items) {
+      const state = itemStates[item.id]
       if (state.state === "damaged") {
         if (!state.note || state.note.trim().length === 0) {
           toast.error(`${item.assetName}: damage description is required`)
+          setConfirming(false)
           return
         }
       }
       if (state.state === "missing") {
         if (!state.note || state.note.trim().length === 0) {
           toast.error(`${item.assetName}: missing item note is required`)
+          setConfirming(false)
           return
         }
       }
@@ -382,30 +392,27 @@ export function ReturnCheckInClient({
               <div className="rounded bg-red-50 p-2">Missing: {submitResult.missing}</div>
               <div className="rounded bg-gray-100 p-2">Inspect: {submitResult.inspection}</div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Submitted by {staffName}. Dashboard updated.
-            </p>
+            <p className="text-xs text-muted-foreground">Submitted by {staffName}</p>
+          </div>
+        ) : confirming ? (
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button className="flex-1 h-12 rounded-xl font-medium bg-destructive hover:bg-destructive/90" disabled={submitting} onClick={handleComplete}>
+              {submitting ? "Saving..." : "Yes, Complete Return"}
+            </Button>
           </div>
         ) : (
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                const updated: ItemStates = {}
-                for (const item of items) {
-                  updated[item.id] = { state: "good" }
-                }
-                setItemStates(updated)
-              }}
-            >
+            <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => {
+              const updated: ItemStates = {}
+              for (const item of items) updated[item.id] = { state: "good" }
+              setItemStates(updated)
+            }}>
               Mark All Good
             </Button>
-            <Button
-              className="flex-1"
-              disabled={submitting}
-              onClick={handleComplete}
-            >
+            <Button className="flex-1 h-12 rounded-xl font-medium" disabled={submitting} onClick={handleComplete}>
               {submitting ? "Saving..." : "Complete Return"}
             </Button>
           </div>
