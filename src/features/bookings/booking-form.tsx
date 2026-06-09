@@ -61,6 +61,7 @@ export function NewBookingForm({
   const [shortages, setShortages] = useState<BulkShortage[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [assetSearch, setAssetSearch] = useState("")
+  const today = new Date().toISOString().split("T")[0]
 
   useEffect(() => {
     if (selectedAssets.size === 0 || !deliveryDate || !returnDate) return
@@ -196,12 +197,12 @@ export function NewBookingForm({
               <div className="space-y-2">
                 <Label htmlFor="deliveryDate">Delivery Date</Label>
                 <p className="text-xs text-muted-foreground">When items leave the warehouse</p>
-                <Input id="deliveryDate" type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required />
+                <Input id="deliveryDate" type="date" min={today} value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="returnDate">Return Date</Label>
                 <p className="text-xs text-muted-foreground">When items come back</p>
-                <Input id="returnDate" type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required />
+                <Input id="returnDate" type="date" min={today} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} required />
               </div>
             </div>
           </CardContent>
@@ -309,11 +310,11 @@ export function NewBookingForm({
           <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="deposit">Deposit (USD)</Label>
+              <Label htmlFor="deposit">Deposit (USD) — optional</Label>
               <Input id="deposit" type="number" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">Notes — optional</Label>
               <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Special requirements..." />
             </div>
           </CardContent>
