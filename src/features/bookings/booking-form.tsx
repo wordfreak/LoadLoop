@@ -93,7 +93,7 @@ export function NewBookingForm({
     setSubmitting(true)
 
     try {
-      let resolvedClientId = addingClient
+      const resolvedClientId = addingClient
         ? (await createClient({ name: newClientName.trim() })).id
         : parseInt(clientId)
 
@@ -295,8 +295,7 @@ export function NewBookingForm({
           className="w-full"
           disabled={
             submitting ||
-            !clientId ||
-            (!clientId && !addingClient) ||
+            (!addingClient && !clientId) ||
             (addingClient && !newClientName.trim()) ||
             !eventName ||
             !deliveryDate ||

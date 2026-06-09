@@ -51,7 +51,8 @@
 - [x] Sample CSV template download
 - [x] Staff photo upload via `/api/job/[token]/upload` (Cloudinary-ready, base64 fallback)
 - [x] File sizes under 450 lines
-- [ ] QR scanning in mobile workflow
+- [x] QR scanning in mobile workflow (pick + return, camera-based)
+- [ ] Production QR label/found-item URL mode
 - [ ] Cloudinary production photo storage (keys needed)
 - [ ] Overdue detection email notifications
 - [ ] Demo video recording
