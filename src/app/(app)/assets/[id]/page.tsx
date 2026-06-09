@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { notFound } from "next/navigation"
 import { OwnerAssetActions } from "@/features/assets/owner-asset-actions"
+import Link from "next/link"
 
 const statusColors: Record<string, string> = {
   available: "bg-emerald-100 text-emerald-700",
@@ -159,9 +160,9 @@ export default async function AssetDetailPage({
                 <CardTitle className="text-sm">Current Booking</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm font-medium">
+                <Link href={`/bookings/${currentBooking[0].id}`} className="text-sm font-medium hover:underline">
                   {currentBooking[0].eventName}
-                </p>
+                </Link>
               </CardContent>
             </Card>
           )}

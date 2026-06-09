@@ -8,7 +8,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>
 }
 
-export function NavLinks({ items }: { items: NavItem[] }) {
+export default function NavLinks({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
   const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href)
 

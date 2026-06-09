@@ -4,6 +4,7 @@ import { getDatabase } from "@/lib/db"
 import { tenants } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { Button } from "@/components/ui/button"
+import NavLinks from "./nav-links"
 import {
   LayoutDashboard,
   Package,
@@ -50,16 +51,7 @@ export default async function AppLayout({
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-2">
-          {navigation.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+          <NavLinks items={navigation} />
         </nav>
         <div className="border-t border-sidebar-border p-2">
           <form
