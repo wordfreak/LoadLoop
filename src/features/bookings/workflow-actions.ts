@@ -64,6 +64,7 @@ export async function confirmPackedItems(
       quantityBooked: bookingItems.quantityBooked,
       quantityCheckedOut: bookingItems.quantityCheckedOut,
       assetStatus: assets.status,
+      isBulk: assets.isBulk,
     })
     .from(bookingItems)
     .innerJoin(assets, eq(assets.id, bookingItems.assetId))
@@ -105,10 +106,12 @@ export async function confirmPackedItems(
       const newStatus: AssetStatus = "checked_out"
 
       if (assetStatus !== "checked_out") {
-        await tx
-          .update(assets)
-          .set({ status: newStatus, updatedAt: new Date() })
-          .where(eq(assets.id, item.assetId))
+        if (!item.isBulk) {
+          await tx
+            .update(assets)
+            .set({ status: newStatus, updatedAt: new Date() })
+            .where(eq(assets.id, item.assetId))
+        }
 
         await tx.insert(assetMovements).values({
           tenantId: booking.tenantId,
@@ -178,6 +181,7 @@ export async function completeReturnCheckIn(
       quantityDamaged: bookingItems.quantityDamaged,
       quantityMissing: bookingItems.quantityMissing,
       assetStatus: assets.status,
+      isBulk: assets.isBulk,
     })
     .from(bookingItems)
     .innerJoin(assets, eq(assets.id, bookingItems.assetId))
@@ -241,10 +245,12 @@ export async function completeReturnCheckIn(
           .where(eq(bookingItems.id, item.id))
 
         if (assetStatus !== "available") {
-          await tx
-            .update(assets)
-            .set({ status: newStatus, updatedAt: new Date() })
-            .where(eq(assets.id, item.assetId))
+          if (!item.isBulk) {
+            await tx
+              .update(assets)
+              .set({ status: newStatus, updatedAt: new Date() })
+              .where(eq(assets.id, item.assetId))
+          }
 
           await tx.insert(assetMovements).values({
             tenantId: booking.tenantId,
@@ -266,10 +272,12 @@ export async function completeReturnCheckIn(
           .where(eq(bookingItems.id, item.id))
 
         if (assetStatus !== "missing") {
-          await tx
-            .update(assets)
-            .set({ status: "missing" as AssetStatus, updatedAt: new Date() })
-            .where(eq(assets.id, item.assetId))
+          if (!item.isBulk) {
+            await tx
+              .update(assets)
+              .set({ status: "missing" as AssetStatus, updatedAt: new Date() })
+              .where(eq(assets.id, item.assetId))
+          }
 
           await tx.insert(assetMovements).values({
             tenantId: booking.tenantId,
@@ -292,10 +300,12 @@ export async function completeReturnCheckIn(
           .where(eq(bookingItems.id, item.id))
 
         if (assetStatus !== "damaged") {
-          await tx
-            .update(assets)
-            .set({ status: "damaged" as AssetStatus, updatedAt: new Date() })
-            .where(eq(assets.id, item.assetId))
+          if (!item.isBulk) {
+            await tx
+              .update(assets)
+              .set({ status: "damaged" as AssetStatus, updatedAt: new Date() })
+              .where(eq(assets.id, item.assetId))
+          }
 
           await tx.insert(assetMovements).values({
             tenantId: booking.tenantId,
@@ -343,13 +353,15 @@ export async function completeReturnCheckIn(
           .where(eq(bookingItems.id, item.id))
 
         if (assetStatus !== "needs_inspection") {
-          await tx
-            .update(assets)
-            .set({
-              status: "needs_inspection" as AssetStatus,
-              updatedAt: new Date(),
-            })
-            .where(eq(assets.id, item.assetId))
+          if (!item.isBulk) {
+            await tx
+              .update(assets)
+              .set({
+                status: "needs_inspection" as AssetStatus,
+                updatedAt: new Date(),
+              })
+              .where(eq(assets.id, item.assetId))
+          }
 
           await tx.insert(assetMovements).values({
             tenantId: booking.tenantId,
