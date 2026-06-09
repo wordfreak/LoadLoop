@@ -8,7 +8,7 @@ import {
   bookingLinks,
   damageReports,
 } from "@/lib/db/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, ne } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,249 +36,107 @@ export default async function BookingDetailPage({
   const session = await auth()
   if (!session?.user?.tenantId) return null
 
-  try {
-    return <BookingDetailContent bookingId={parseInt(id, 10)} tenantId={session.user.tenantId} session={session} />
-  } catch {
-    return <BookingDetailError />
-  }
-}
-
-function BookingDetailError() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Booking</h1>
-      <p className="text-sm text-muted-foreground">Unable to load booking details. Please try again.</p>
-    </div>
-  )
-}
-
-async function BookingDetailContent({
-  bookingId,
-  tenantId,
-  session,
-}: {
-  bookingId: number
-  tenantId: number
-  session: { user: { tenantId: number; name?: string | null; email?: string | null; role: string } }
-}) {
-
+  const bookingId = parseInt(id, 10)
   const db = getDatabase()
+  const tenantId = session.user.tenantId
 
-  const [booking] = await db
-    .select()
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.id, bookingId),
-        eq(bookings.tenantId, tenantId)
-      )
-    )
-    .limit(1)
+  let errors: string[] = []
 
+  let booking = null
+  try { [booking] = await db.select().from(bookings).where(and(eq(bookings.id, bookingId), eq(bookings.tenantId, tenantId))).limit(1) } catch { errors.push("booking") }
+  if (!booking) {
+    try { [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1) } catch { errors.push("booking2") }
+  }
   if (!booking) notFound()
 
-  const [client] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, booking.clientId))
-    .limit(1)
+  let client = null
+  try { [client] = await db.select().from(clients).where(eq(clients.id, booking.clientId)).limit(1) } catch { errors.push("client") }
 
-  const items = await db
-    .select({
-      id: bookingItems.id,
-      assetId: bookingItems.assetId,
-      assetName: assets.name,
-      assetPhotoUrl: assets.photoUrl,
-      assetStatus: assets.status,
-      quantityBooked: bookingItems.quantityBooked,
-      quantityPacked: bookingItems.quantityPacked,
-      quantityCheckedOut: bookingItems.quantityCheckedOut,
-      quantityReturned: bookingItems.quantityReturned,
-      quantityDamaged: bookingItems.quantityDamaged,
-      quantityMissing: bookingItems.quantityMissing,
-    })
-    .from(bookingItems)
-    .innerJoin(assets, eq(assets.id, bookingItems.assetId))
-    .where(eq(bookingItems.bookingId, bookingId))
+  let items: any[] = []
+  try {
+    items = await db.select({ id: bookingItems.id, assetId: bookingItems.assetId, assetName: assets.name, assetPhotoUrl: assets.photoUrl, assetStatus: assets.status, quantityBooked: bookingItems.quantityBooked, quantityPacked: bookingItems.quantityPacked, quantityCheckedOut: bookingItems.quantityCheckedOut, quantityReturned: bookingItems.quantityReturned, quantityDamaged: bookingItems.quantityDamaged, quantityMissing: bookingItems.quantityMissing })
+      .from(bookingItems).innerJoin(assets, eq(assets.id, bookingItems.assetId)).where(eq(bookingItems.bookingId, bookingId))
+  } catch { errors.push("items") }
 
-  const existingLinks = await db
-    .select()
-    .from(bookingLinks)
-    .where(
-      and(
-        eq(bookingLinks.bookingId, bookingId),
-        eq(bookingLinks.tenantId, tenantId)
-      )
-    )
-
-  let pickLink = existingLinks.find((l) => l.linkType === "pick")
-  let returnLink = existingLinks.find((l) => l.linkType === "return")
-
+  let existingLinks: any[] = []
+  try { existingLinks = await db.select().from(bookingLinks).where(and(eq(bookingLinks.bookingId, bookingId), eq(bookingLinks.tenantId, tenantId))) } catch { errors.push("links") }
+  let pickLink = existingLinks.find((l: any) => l.linkType === "pick")
+  let returnLink = existingLinks.find((l: any) => l.linkType === "return")
   if (!pickLink || !returnLink) {
     try {
-      const generated = await generateBookingLinks(
-        bookingId,
-        tenantId
-      )
+      const generated = await generateBookingLinks(bookingId, tenantId)
       pickLink = pickLink ?? generated.pickLink
       returnLink = returnLink ?? generated.returnLink
-    } catch {}
+    } catch { errors.push("genLinks") }
   }
 
-  const bookingDamages = await db
-    .select()
-    .from(damageReports)
-    .where(
-      and(
-        eq(damageReports.bookingId, bookingId),
-        eq(damageReports.tenantId, tenantId)
-      )
+  let bookingDamages: any[] = []
+  try { bookingDamages = await db.select().from(damageReports).where(and(eq(damageReports.bookingId, bookingId), eq(damageReports.tenantId, tenantId))) } catch { errors.push("damage") }
+
+  if (errors.length > 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div><h1 className="text-2xl font-semibold">{booking.eventName}</h1><p className="text-sm text-muted-foreground mt-1">{client?.name}</p></div>
+          <Badge className={bookingStatusColors[booking.status] ?? ""}>{booking.status}</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">Some details unavailable. <a href="/bookings" className="underline">Back to bookings</a></p>
+      </div>
     )
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-
   const totalItems = items.length
-  const packedItems = items.filter((i) => i.quantityPacked > 0).length
-  const returnedItems = items.filter((i) => i.quantityReturned > 0).length
+  const packedItems = items.filter((i: any) => i.quantityPacked > 0).length
+  const returnedItems = items.filter((i: any) => i.quantityReturned > 0).length
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{booking.eventName}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {client?.name} · {booking.startDate} to {booking.endDate}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{client?.name} · {booking.startDate} to {booking.endDate}</p>
         </div>
-        <Badge className={bookingStatusColors[booking.status] ?? ""}>
-          {booking.status}
-        </Badge>
+        <Badge className={bookingStatusColors[booking.status] ?? ""}>{booking.status}</Badge>
       </div>
-
       <div className="grid grid-cols-4 gap-4">
-        <div className="rounded-lg bg-muted p-4 text-center">
-          <p className="text-2xl font-bold">{totalItems}</p>
-          <p className="text-xs text-muted-foreground">Total Items</p>
-        </div>
-        <div className="rounded-lg bg-indigo-50 p-4 text-center">
-          <p className="text-2xl font-bold text-indigo-700">{packedItems}</p>
-          <p className="text-xs text-indigo-600">Packed</p>
-        </div>
-        <div className="rounded-lg bg-green-50 p-4 text-center">
-          <p className="text-2xl font-bold text-green-700">{returnedItems}</p>
-          <p className="text-xs text-green-600">Returned</p>
-        </div>
-        <div className="rounded-lg bg-amber-50 p-4 text-center">
-          <p className="text-2xl font-bold text-amber-700">
-            {bookingDamages.length}
-          </p>
-          <p className="text-xs text-amber-600">Damage Reports</p>
-        </div>
+        <div className="rounded-lg bg-muted p-4 text-center"><p className="text-2xl font-bold">{totalItems}</p><p className="text-xs text-muted-foreground">Total Items</p></div>
+        <div className="rounded-lg bg-indigo-50 p-4 text-center"><p className="text-2xl font-bold text-indigo-700">{packedItems}</p><p className="text-xs text-indigo-600">Packed</p></div>
+        <div className="rounded-lg bg-green-50 p-4 text-center"><p className="text-2xl font-bold text-green-700">{returnedItems}</p><p className="text-xs text-green-600">Returned</p></div>
+        <div className="rounded-lg bg-amber-50 p-4 text-center"><p className="text-2xl font-bold text-amber-700">{bookingDamages.length}</p><p className="text-xs text-amber-600">Damage Reports</p></div>
       </div>
-
       {booking.depositAmount && (
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Deposit</p>
-              <p className="text-2xl font-bold">
-                ${Number(booking.depositAmount).toLocaleString()}
-              </p>
-            </div>
-            <Badge>{booking.depositStatus ?? "pending"}</Badge>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4 flex items-center justify-between"><div><p className="text-sm font-medium">Deposit</p><p className="text-2xl font-bold">${Number(booking.depositAmount).toLocaleString()}</p></div><Badge>{booking.depositStatus ?? "pending"}</Badge></CardContent></Card>
       )}
-
       {booking.status !== "returned" && booking.status !== "cancelled" && (
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <ExternalLink className="h-4 w-4 text-blue-600" />
-              Send to Staff
-            </CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><ExternalLink className="h-4 w-4 text-blue-600" />Send to Staff</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Staff open these links on their phone — no login required. Send via WhatsApp, SMS, or email.
-            </p>
+            <p className="text-sm text-muted-foreground">Staff open these links on their phone — no login required.</p>
             <div className="flex flex-wrap gap-3">
-              {pickLink && (
-                <CopyLinkButton url={`${appUrl}/j/${pickLink.token}/pick`} label="Copy Packing Link" />
-              )}
-              {returnLink && (
-                <CopyLinkButton url={`${appUrl}/j/${returnLink.token}/return`} label="Copy Return Link" />
-              )}
+              {pickLink && <CopyLinkButton url={`${appUrl}/j/${pickLink.token}/pick`} label="Copy Packing Link" />}
+              {returnLink && <CopyLinkButton url={`${appUrl}/j/${returnLink.token}/return`} label="Copy Return Link" />}
             </div>
           </CardContent>
         </Card>
       )}
-
-      <OwnerActions
-        bookingId={booking.id}
-        bookingStatus={booking.status}
-      />
-
+      <OwnerActions bookingId={booking.id} bookingStatus={booking.status} />
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Asset List</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-base">Asset List</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 rounded-lg border p-3"
-              >
-                <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
-                  {item.assetPhotoUrl ? (
-                    <img
-                      src={item.assetPhotoUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
-                      -
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {item.assetName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Qty: {item.quantityBooked}
-                    {item.quantityPacked > 0 &&
-                      ` · Packed: ${item.quantityPacked}`}
-                    {item.quantityCheckedOut > 0 &&
-                      ` · Out: ${item.quantityCheckedOut}`}
-                    {item.quantityReturned > 0 &&
-                      ` · Returned: ${item.quantityReturned}`}
-                  </p>
-                </div>
-                {item.quantityDamaged > 0 && (
-                  <Badge className="bg-red-100 text-red-700">Damaged</Badge>
-                )}
-                {item.quantityMissing > 0 && (
-                  <Badge className="bg-red-100 text-red-700">Missing</Badge>
-                )}
+            {items.map((item: any) => (
+              <div key={item.id} className="flex items-center gap-4 rounded-lg border p-3">
+                <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">{item.assetPhotoUrl ? <img src={item.assetPhotoUrl} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">-</div>}</div>
+                <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{item.assetName}</p><p className="text-xs text-muted-foreground">Qty: {item.quantityBooked}{item.quantityPacked > 0 && ` · Packed: ${item.quantityPacked}`}{item.quantityCheckedOut > 0 && ` · Out: ${item.quantityCheckedOut}`}{item.quantityReturned > 0 && ` · Returned: ${item.quantityReturned}`}</p></div>
+                {item.quantityDamaged > 0 && <Badge className="bg-red-100 text-red-700">Damaged</Badge>}
+                {item.quantityMissing > 0 && <Badge className="bg-orange-100 text-orange-700">Missing</Badge>}
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
-
-      {booking.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{booking.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+      {booking.notes && (<Card><CardHeader><CardTitle className="text-sm">Notes</CardTitle></CardHeader><CardContent><p className="text-sm">{booking.notes}</p></CardContent></Card>)}
     </div>
   )
 }
