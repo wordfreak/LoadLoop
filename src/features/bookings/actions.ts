@@ -16,16 +16,26 @@ type BookingConflict = {
   conflictEndDate: string
 }
 
+type BulkShortage = {
+  assetId: number
+  assetName: string
+  totalQuantity: number
+  alreadyBooked: number
+  requested: number
+  available: number
+}
+
 export async function detectBookingConflicts(
   assetIds: number[],
   startDate: string,
   endDate: string,
   tenantId: number,
+  quantities?: Map<number, number>,
   excludeBookingId?: number
-): Promise<BookingConflict[]> {
+): Promise<{ conflicts: BookingConflict[]; shortages: BulkShortage[] }> {
   const db = getDatabase()
 
-  if (assetIds.length === 0) return []
+  if (assetIds.length === 0) return { conflicts: [], shortages: [] }
 
   const conditions = [
     inArray(bookingItems.assetId, assetIds),
@@ -55,7 +65,7 @@ export async function detectBookingConflicts(
     .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
     .where(and(...conditions))
 
-  return rows.map((row) => ({
+  const conflicts = rows.map((row) => ({
     assetId: row.assetId,
     assetName: row.assetName,
     conflictBookingId: row.bookingId,
@@ -63,6 +73,59 @@ export async function detectBookingConflicts(
     conflictStartDate: row.startDate,
     conflictEndDate: row.endDate,
   }))
+
+  const shortages: BulkShortage[] = []
+
+  if (quantities && quantities.size > 0) {
+    const bulkAssetIds = Array.from(quantities.keys())
+
+    const bulkAssets = await db
+      .select({ id: assets.id, name: assets.name, totalQuantity: assets.quantity })
+      .from(assets)
+      .where(and(inArray(assets.id, bulkAssetIds), eq(assets.isBulk, true), eq(assets.tenantId, tenantId)))
+
+    if (bulkAssets.length > 0) {
+      const bookedQuantities = await db
+        .select({
+          assetId: bookingItems.assetId,
+          totalBooked: sql<number>`COALESCE(SUM(${bookingItems.quantityBooked}), 0)`.mapWith(Number),
+        })
+        .from(bookingItems)
+        .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+        .where(
+          and(
+            inArray(bookingItems.assetId, bulkAssets.map((a) => a.id)),
+            eq(bookings.tenantId, tenantId),
+            gte(sql`COALESCE(${bookings.returnDate}, ${bookings.endDate})`, startDate),
+            lte(bookings.startDate, endDate),
+            not(eq(bookings.status, "cancelled")),
+            not(eq(bookings.status, "returned"))
+          )
+        )
+        .groupBy(bookingItems.assetId)
+
+      const bookedMap = new Map(bookedQuantities.map((r) => [r.assetId, r.totalBooked]))
+
+      for (const asset of bulkAssets) {
+        const requested = quantities.get(asset.id) ?? 0
+        const alreadyBooked = bookedMap.get(asset.id) ?? 0
+        const available = asset.totalQuantity - alreadyBooked
+
+        if (requested > available) {
+          shortages.push({
+            assetId: asset.id,
+            assetName: asset.name,
+            totalQuantity: asset.totalQuantity,
+            alreadyBooked,
+            requested,
+            available,
+          })
+        }
+      }
+    }
+  }
+
+  return { conflicts, shortages }
 }
 
 export async function createBooking(input: FormData | Record<string, unknown>) {
@@ -173,7 +236,7 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
     }
   }
 
-  const conflicts = await detectBookingConflicts(
+  const { conflicts, shortages } = await detectBookingConflicts(
     Array.from(merged.keys()),
     requestedStart,
     requestedEnd,

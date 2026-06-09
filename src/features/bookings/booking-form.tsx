@@ -29,6 +29,15 @@ type BookingConflict = {
   conflictEndDate: string
 }
 
+type BulkShortage = {
+  assetId: number
+  assetName: string
+  totalQuantity: number
+  alreadyBooked: number
+  requested: number
+  available: number
+}
+
 export function NewBookingForm({
   tenantId,
   clients,
@@ -49,6 +58,7 @@ export function NewBookingForm({
   const [notes, setNotes] = useState("")
   const [selectedAssets, setSelectedAssets] = useState<Map<number, number>>(new Map())
   const [conflicts, setConflicts] = useState<BookingConflict[]>([])
+  const [shortages, setShortages] = useState<BulkShortage[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [assetSearch, setAssetSearch] = useState("")
 
@@ -60,10 +70,13 @@ export function NewBookingForm({
 
     async function check() {
       try {
-        const result = await detectBookingConflicts(assetIds, deliveryDate, returnDate, tenantId)
-        if (!cancelled) setConflicts(result)
+        const result = await detectBookingConflicts(assetIds, deliveryDate, returnDate, tenantId, selectedAssets)
+        if (!cancelled) {
+          setConflicts(result.conflicts)
+          setShortages(result.shortages)
+        }
       } catch {
-        if (!cancelled) setConflicts([])
+        if (!cancelled) { setConflicts([]); setShortages([]) }
       }
     }
     check()
@@ -115,8 +128,8 @@ export function NewBookingForm({
       })
 
       if (result && "error" in result) {
-        setConflicts(result.conflicts ?? [])
-        toast.error(`${result.conflicts?.length ?? 0} item(s) already booked on these dates`)
+        setConflicts((result as { conflicts: BookingConflict[] }).conflicts ?? [])
+        toast.error(`${(result as { conflicts: BookingConflict[] }).conflicts?.length ?? 0} item(s) already booked on these dates`)
         return
       }
 
@@ -221,6 +234,22 @@ export function NewBookingForm({
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {shortages.length > 0 && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <div className="flex items-center gap-2 text-red-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  <p className="text-sm font-medium">{shortages.length} bulk shortage(s)</p>
+                </div>
+                <div className="mt-2 space-y-1">
+                  {shortages.map((s) => (
+                    <p key={s.assetId} className="text-xs text-red-600">
+                      {s.assetName}: only {s.available} available ({s.alreadyBooked} already booked, {s.requested} requested)
+                    </p>
+                  ))}
+                </div>
               </div>
             )}
 
