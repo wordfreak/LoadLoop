@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Scan, X } from "lucide-react"
 
@@ -15,6 +15,23 @@ export function QrScanner({
 }) {
   const scannerRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<{ stop: () => Promise<void> } | null>(null)
+  const onScanRef = useRef(onScan)
+  const onToggleRef = useRef(onToggle)
+
+  useEffect(() => {
+    onScanRef.current = onScan
+  }, [onScan])
+
+  useEffect(() => {
+    onToggleRef.current = onToggle
+  }, [onToggle])
+
+  const stopScanner = useCallback(async () => {
+    if (instanceRef.current) {
+      await instanceRef.current.stop()
+      instanceRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (!scanning || !scannerRef.current) return
@@ -23,8 +40,8 @@ export function QrScanner({
 
     async function start() {
       const { Html5Qrcode } = await import("html5-qrcode")
-
       const scanner = new Html5Qrcode("qr-scanner")
+
       instanceRef.current = { stop: () => scanner.stop() }
 
       try {
@@ -33,15 +50,15 @@ export function QrScanner({
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decoded) => {
             if (mounted) {
-              onScan(decoded)
+              onScanRef.current(decoded)
               scanner.stop()
-              onToggle()
+              onToggleRef.current()
             }
           },
           () => {}
         )
       } catch {
-        onToggle()
+        onToggleRef.current()
       }
     }
 
@@ -49,11 +66,15 @@ export function QrScanner({
 
     return () => {
       mounted = false
-      if (instanceRef.current) {
-        instanceRef.current.stop()
-      }
+      stopScanner()
     }
-  }, [scanning])
+  }, [scanning, stopScanner])
+
+  useEffect(() => {
+    return () => {
+      stopScanner()
+    }
+  }, [stopScanner])
 
   return (
     <>

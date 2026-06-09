@@ -87,6 +87,17 @@ export async function importAssets(
       const lowerName = categoryName.toLowerCase()
       if (categoryMap.has(lowerName)) {
         categoryId = categoryMap.get(lowerName)!
+      } else {
+        const [newCat] = await db
+          .insert(categories)
+          .values({
+            tenantId,
+            name: categoryName,
+            slug: categoryName.toLowerCase().replace(/\s+/g, "-"),
+          })
+          .returning()
+        categoryMap.set(lowerName, newCat.id)
+        categoryId = newCat.id
       }
     }
 

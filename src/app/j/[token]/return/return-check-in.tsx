@@ -81,6 +81,15 @@ export function ReturnCheckInClient({
       toast.error("QR code not found in this return")
       return
     }
+    const current = itemStates[item.id]
+    if (current && current.state !== "unchecked" && current.state !== "good") {
+      toast.error(`${item.assetName} is already marked as ${current.state} — resolve first`)
+      return
+    }
+    if (current?.state === "good") {
+      toast(`${item.assetName} — already marked good`)
+      return
+    }
     setItemState(item.id, "good")
     toast.success(`${item.assetName} — marked as good`)
   }

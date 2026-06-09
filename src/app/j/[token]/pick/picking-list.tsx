@@ -63,6 +63,7 @@ export function PickingListClient({
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [newlySelected, setNewlySelected] = useState<Set<number>>(new Set())
 
   const highValueItems = items.filter((i) => i.isHighValue)
   const bulkItems = items.filter((i) => !i.isHighValue)
@@ -76,6 +77,9 @@ export function PickingListClient({
       else next.add(id)
       return next
     })
+    if (partiallyDispatched) {
+      setNewlySelected((prev) => new Set(prev).add(id))
+    }
   }
 
   function handleNameSubmit(e: React.FormEvent) {
@@ -110,7 +114,11 @@ export function PickingListClient({
       toast.error("QR code not found in this packing list")
       return
     }
-    toggleItem(item.id)
+    if (packedItems.has(item.id)) {
+      toast(`${item.assetName} — already packed`)
+      return
+    }
+    setPackedItems((prev) => new Set(prev).add(item.id))
     toast.success(`${item.assetName} — marked as packed`)
   }
 
@@ -124,6 +132,27 @@ export function PickingListClient({
             All items for {bookingEventName} have been packed and dispatched.
           </p>
         </div>
+      </div>
+    )
+  }
+
+  if (!nameEntered) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+        <form onSubmit={handleNameSubmit} className="w-full max-w-sm space-y-4">
+          <div className="text-center">
+            <Package className="h-8 w-8 mx-auto text-muted-foreground" />
+            <h1 className="text-xl font-semibold mt-2">Pack &amp; Dispatch</h1>
+            <p className="text-sm text-muted-foreground mt-1">{bookingEventName}</p>
+          </div>
+          <Input
+            placeholder="Enter your first name"
+            value={staffName}
+            onChange={(e) => setStaffName(e.target.value)}
+            required
+          />
+          <Button type="submit" className="w-full">Continue</Button>
+        </form>
       </div>
     )
   }
@@ -190,41 +219,23 @@ export function PickingListClient({
         </div>
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
           <Button
-            className="w-full"
-            disabled={submitting || packedItems.size === 0}
-            onClick={handleConfirm}
+            className="w-full h-12 rounded-xl font-medium"
+            disabled={submitting || newlySelected.size === 0}
+            onClick={async () => {
+              setSubmitting(true)
+              try {
+                await confirmPackedItems(token, Array.from(newlySelected), staffName)
+                setSubmitted(true)
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to confirm")
+              } finally {
+                setSubmitting(false)
+              }
+            }}
           >
             {submitting ? "Saving..." : "Confirm Remaining Packed & Out"}
           </Button>
         </div>
-      </div>
-    )
-  }
-
-  if (!nameEntered) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-        <form
-          onSubmit={handleNameSubmit}
-          className="w-full max-w-sm space-y-4"
-        >
-          <div className="text-center">
-            <Package className="h-8 w-8 mx-auto text-muted-foreground" />
-            <h1 className="text-xl font-semibold mt-2">Pack &amp; Dispatch</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {bookingEventName}
-            </p>
-          </div>
-          <Input
-            placeholder="Enter your first name"
-            value={staffName}
-            onChange={(e) => setStaffName(e.target.value)}
-            required
-          />
-          <Button type="submit" className="w-full">
-            Continue
-          </Button>
-        </form>
       </div>
     )
   }

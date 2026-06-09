@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth/config"
 import { getDatabase } from "@/lib/db"
 import { bookings, bookingItems, assets, clients } from "@/lib/db/schema"
-import { eq, and, inArray, lte, gte, not, ne } from "drizzle-orm"
+import { eq, and, inArray, lte, gte, not, ne, sql } from "drizzle-orm"
 import { createBookingSchema, createClientSchema, updateClientSchema } from "./schemas"
 
 type BookingConflict = {
@@ -118,6 +118,48 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
         throw new Error(
           `Only ${asset.totalQuantity} available for ${item.assetId}, requested ${item.quantityBooked}`
         )
+      }
+    }
+
+    const bulkItems = parsed.items.filter((item) => {
+      const asset = tenantAssetMap.get(item.assetId)
+      return asset?.isBulk
+    })
+
+    if (bulkItems.length > 0) {
+      const bulkAssetIds = bulkItems.map((i) => i.assetId)
+
+      const overlappingBooked = await db
+        .select({
+          assetId: bookingItems.assetId,
+          totalBooked: sql<number>`COALESCE(SUM(${bookingItems.quantityBooked}), 0)`.mapWith(Number),
+        })
+        .from(bookingItems)
+        .innerJoin(bookings, eq(bookings.id, bookingItems.bookingId))
+        .where(
+          and(
+            inArray(bookingItems.assetId, bulkAssetIds),
+            eq(bookings.tenantId, tenantId),
+            gte(bookings.returnDate ?? bookings.endDate, parsed.startDate),
+            lte(bookings.startDate, parsed.endDate),
+            not(eq(bookings.status, "cancelled")),
+            not(eq(bookings.status, "returned"))
+          )
+        )
+        .groupBy(bookingItems.assetId)
+
+      const bookedMap = new Map(overlappingBooked.map((r) => [r.assetId, r.totalBooked]))
+
+      for (const item of bulkItems) {
+        const asset = tenantAssetMap.get(item.assetId)!
+        const alreadyBooked = bookedMap.get(item.assetId) ?? 0
+        const available = asset.totalQuantity - alreadyBooked
+
+        if (item.quantityBooked > available) {
+          throw new Error(
+            `Only ${available} available for asset ${item.assetId} on these dates (${alreadyBooked} already booked, ${item.quantityBooked} requested)`
+          )
+        }
       }
     }
   }
