@@ -104,7 +104,7 @@ export function DamageForm({
                     }}
                   />
                   <p className="text-xs text-muted-foreground text-center">
-                    A photo is required for damage reports
+                    Take a photo of the damage
                   </p>
                 </div>
               )}

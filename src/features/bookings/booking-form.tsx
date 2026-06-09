@@ -41,6 +41,7 @@ export function NewBookingForm({
   const router = useRouter()
   const [clientId, setClientId] = useState("")
   const [newClientName, setNewClientName] = useState("")
+  const [addingClient, setAddingClient] = useState(false)
   const [eventName, setEventName] = useState("")
   const [deliveryDate, setDeliveryDate] = useState("")
   const [returnDate, setReturnDate] = useState("")
@@ -92,7 +93,7 @@ export function NewBookingForm({
     setSubmitting(true)
 
     try {
-      let resolvedClientId = newClientName.trim()
+      let resolvedClientId = addingClient
         ? (await createClient({ name: newClientName.trim() })).id
         : parseInt(clientId)
 
@@ -147,7 +148,7 @@ export function NewBookingForm({
             <div className="space-y-2">
               <Label htmlFor="client">Client</Label>
               <div className="flex gap-2">
-                <Select value={clientId} onValueChange={(v) => { setClientId(v ?? ""); setNewClientName("") }} disabled={!!newClientName}>
+                <Select value={clientId} onValueChange={(v) => { setClientId(v ?? ""); setAddingClient(false) }} disabled={addingClient}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
@@ -157,12 +158,15 @@ export function NewBookingForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => { setClientId(""); setNewClientName("") }}>
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => { setClientId(""); setAddingClient(true) }}>
                   + New
                 </Button>
               </div>
-              {newClientName !== undefined && clientId === "" && (
-                <Input placeholder="New client name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} autoFocus />
+              {addingClient && (
+                <div className="flex gap-2">
+                  <Input placeholder="New client name" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} autoFocus />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setAddingClient(false)}>Cancel</Button>
+                </div>
               )}
             </div>
             <div className="space-y-2">
@@ -292,7 +296,8 @@ export function NewBookingForm({
           disabled={
             submitting ||
             !clientId ||
-            !clientId && !newClientName.trim() ||
+            (!clientId && !addingClient) ||
+            (addingClient && !newClientName.trim()) ||
             !eventName ||
             !deliveryDate ||
             !returnDate ||

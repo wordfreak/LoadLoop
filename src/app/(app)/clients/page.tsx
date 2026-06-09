@@ -35,11 +35,13 @@ export default async function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {clientRows.length} clients
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Clients</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {clientRows.length} clients
+          </p>
+        </div>
       </div>
 
       <div className="rounded-md border">

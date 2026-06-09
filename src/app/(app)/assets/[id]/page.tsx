@@ -125,7 +125,7 @@ export default async function AssetDetailPage({
                 />
               ) : (
                 <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
-                  No photo
+                    No photo added
                 </div>
               )}
             </CardContent>
