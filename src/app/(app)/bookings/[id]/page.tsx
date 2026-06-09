@@ -36,8 +36,33 @@ export default async function BookingDetailPage({
   const session = await auth()
   if (!session?.user?.tenantId) return null
 
+  try {
+    return <BookingDetailContent bookingId={parseInt(id, 10)} tenantId={session.user.tenantId} session={session} />
+  } catch {
+    return <BookingDetailError />
+  }
+}
+
+function BookingDetailError() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold">Booking</h1>
+      <p className="text-sm text-muted-foreground">Unable to load booking details. Please try again.</p>
+    </div>
+  )
+}
+
+async function BookingDetailContent({
+  bookingId,
+  tenantId,
+  session,
+}: {
+  bookingId: number
+  tenantId: number
+  session: { user: { tenantId: number; name?: string | null; email?: string | null; role: string } }
+}) {
+
   const db = getDatabase()
-  const bookingId = parseInt(id, 10)
 
   const [booking] = await db
     .select()
@@ -45,7 +70,7 @@ export default async function BookingDetailPage({
     .where(
       and(
         eq(bookings.id, bookingId),
-        eq(bookings.tenantId, session.user.tenantId)
+        eq(bookings.tenantId, tenantId)
       )
     )
     .limit(1)
@@ -82,7 +107,7 @@ export default async function BookingDetailPage({
     .where(
       and(
         eq(bookingLinks.bookingId, bookingId),
-        eq(bookingLinks.tenantId, session.user.tenantId)
+        eq(bookingLinks.tenantId, tenantId)
       )
     )
 
@@ -93,7 +118,7 @@ export default async function BookingDetailPage({
     try {
       const generated = await generateBookingLinks(
         bookingId,
-        session.user.tenantId
+        tenantId
       )
       pickLink = pickLink ?? generated.pickLink
       returnLink = returnLink ?? generated.returnLink
@@ -106,7 +131,7 @@ export default async function BookingDetailPage({
     .where(
       and(
         eq(damageReports.bookingId, bookingId),
-        eq(damageReports.tenantId, session.user.tenantId)
+        eq(damageReports.tenantId, tenantId)
       )
     )
 
