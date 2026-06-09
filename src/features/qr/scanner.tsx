@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useId } from "react"
 import { Button } from "@/components/ui/button"
 import { Scan, X } from "lucide-react"
 
@@ -17,6 +17,7 @@ export function QrScanner({
   const instanceRef = useRef<{ stop: () => Promise<void> } | null>(null)
   const onScanRef = useRef(onScan)
   const onToggleRef = useRef(onToggle)
+  const scannerId = useId()
 
   useEffect(() => {
     onScanRef.current = onScan
@@ -26,13 +27,6 @@ export function QrScanner({
     onToggleRef.current = onToggle
   }, [onToggle])
 
-  const stopScanner = useCallback(async () => {
-    if (instanceRef.current) {
-      await instanceRef.current.stop()
-      instanceRef.current = null
-    }
-  }, [])
-
   useEffect(() => {
     if (!scanning || !scannerRef.current) return
 
@@ -40,8 +34,7 @@ export function QrScanner({
 
     async function start() {
       const { Html5Qrcode } = await import("html5-qrcode")
-      const scanner = new Html5Qrcode("qr-scanner")
-
+      const scanner = new Html5Qrcode(scannerId)
       instanceRef.current = { stop: () => scanner.stop() }
 
       try {
@@ -72,39 +65,29 @@ export function QrScanner({
 
     return () => {
       mounted = false
-      stopScanner()
+      if (instanceRef.current) {
+        instanceRef.current.stop()
+        instanceRef.current = null
+      }
     }
-  }, [scanning, stopScanner])
-
-  useEffect(() => {
-    return () => {
-      stopScanner()
-    }
-  }, [stopScanner])
+  }, [scanning, scannerId])
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onToggle}
-        className="gap-2"
-      >
+      <Button variant="outline" size="sm" onClick={onToggle} className="gap-2">
         {scanning ? (
           <>
-            <X className="h-4 w-4" />
-            Stop Scanning
+            <X className="h-4 w-4" /> Stop Scanning
           </>
         ) : (
           <>
-            <Scan className="h-4 w-4" />
-            Scan QR
+            <Scan className="h-4 w-4" /> Scan QR
           </>
         )}
       </Button>
       {scanning && (
         <div className="rounded-lg overflow-hidden border">
-          <div id="qr-scanner" ref={scannerRef} className="w-full" />
+          <div id={scannerId} ref={scannerRef} className="w-full" />
         </div>
       )}
     </>

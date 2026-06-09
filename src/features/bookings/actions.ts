@@ -85,8 +85,14 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
   const requestedStart = parsed.startDate
   const requestedEnd = parsed.returnDate ?? parsed.endDate
 
+  const merged = new Map<number, number>()
+  for (const item of parsed.items) {
+    merged.set(item.assetId, (merged.get(item.assetId) ?? 0) + item.quantityBooked)
+  }
+
   if (parsed.items.length > 0) {
-    const assetIds = parsed.items.map((i) => i.assetId)
+
+    const assetIds = Array.from(merged.keys())
     const tenantAssets = await db
       .select({
         id: assets.id,
@@ -102,35 +108,35 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
     const blockedStatuses = ["damaged", "missing", "needs_inspection", "retired"]
     const tenantAssetMap = new Map(tenantAssets.map((a) => [a.id, a]))
 
-    for (const item of parsed.items) {
-      const asset = tenantAssetMap.get(item.assetId)
+    for (const [assetId, quantity] of merged.entries()) {
+      const asset = tenantAssetMap.get(assetId)
       if (!asset) {
-        throw new Error(`Asset ${item.assetId} does not belong to your company`)
+        throw new Error(`Asset ${assetId} does not belong to your company`)
       }
       if (blockedStatuses.includes(asset.status)) {
         throw new Error(
-          `Asset ${item.assetId} is ${asset.status.replace(/_/g, " ")} and cannot be booked`
+          `Asset ${assetId} is ${asset.status.replace(/_/g, " ")} and cannot be booked`
         )
       }
-      if (!asset.isBulk && item.quantityBooked !== 1) {
+      if (!asset.isBulk && quantity !== 1) {
         throw new Error(
-          `Asset ${item.assetId} is not a bulk item — quantity must be 1`
+          `Asset ${assetId} is not a bulk item — quantity must be 1`
         )
       }
-      if (asset.isBulk && item.quantityBooked > asset.totalQuantity) {
+      if (asset.isBulk && quantity > asset.totalQuantity) {
         throw new Error(
-          `Only ${asset.totalQuantity} available for ${item.assetId}, requested ${item.quantityBooked}`
+          `Only ${asset.totalQuantity} available for ${assetId}, requested ${quantity}`
         )
       }
     }
 
-    const bulkItems = parsed.items.filter((item) => {
-      const asset = tenantAssetMap.get(item.assetId)
+    const bulkItems = Array.from(merged.entries()).filter(([assetId]) => {
+      const asset = tenantAssetMap.get(assetId)
       return asset?.isBulk
     })
 
     if (bulkItems.length > 0) {
-      const bulkAssetIds = bulkItems.map((i) => i.assetId)
+      const bulkAssetIds = bulkItems.map(([id]) => id)
 
       const overlappingBooked = await db
         .select({
@@ -153,14 +159,14 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
 
       const bookedMap = new Map(overlappingBooked.map((r) => [r.assetId, r.totalBooked]))
 
-      for (const item of bulkItems) {
-        const asset = tenantAssetMap.get(item.assetId)!
-        const alreadyBooked = bookedMap.get(item.assetId) ?? 0
+      for (const [assetId, qty] of bulkItems) {
+        const asset = tenantAssetMap.get(assetId)!
+        const alreadyBooked = bookedMap.get(assetId) ?? 0
         const available = asset.totalQuantity - alreadyBooked
 
-        if (item.quantityBooked > available) {
+        if (qty > available) {
           throw new Error(
-            `Only ${available} available for asset ${item.assetId} on these dates (${alreadyBooked} already booked, ${item.quantityBooked} requested)`
+            `Only ${available} available for asset ${assetId} on these dates (${alreadyBooked} already booked, ${qty} requested)`
           )
         }
       }
@@ -168,7 +174,7 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
   }
 
   const conflicts = await detectBookingConflicts(
-    parsed.items.map((i) => i.assetId),
+    Array.from(merged.keys()),
     requestedStart,
     requestedEnd,
     tenantId
@@ -195,11 +201,11 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
       })
       .returning()
 
-    for (const item of parsed.items) {
+    for (const [assetId, qty] of merged.entries()) {
       await tx.insert(bookingItems).values({
         bookingId: booking.id,
-        assetId: item.assetId,
-        quantityBooked: item.quantityBooked,
+        assetId,
+        quantityBooked: qty,
       })
     }
 
