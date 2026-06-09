@@ -134,7 +134,7 @@ export function NewBookingForm({
       }
 
       toast.success("Booking created")
-      router.push("/bookings")
+      router.push(`/bookings/${result.booking.id}`)
       router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create booking")
