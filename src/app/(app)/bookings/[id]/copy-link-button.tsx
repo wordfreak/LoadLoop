@@ -26,7 +26,7 @@ export function CopyLinkButton({
   }
 
   return (
-    <Button variant="outline" onClick={handleCopy} className="gap-2">
+    <Button variant="default" onClick={handleCopy} className="gap-2 h-10">
       {copied ? (
         <Check className="h-4 w-4 text-emerald-600" />
       ) : (

@@ -82,7 +82,8 @@ export function ReturnCheckInClient({
 
   function handleQrScan(scannedToken: string) {
     const clean = scannedToken.trim()
-    const item = items.find((i) => i.assetQrToken === clean)
+    const token = clean.includes("/") ? clean.split("/").pop() ?? clean : clean
+    const item = items.find((i) => i.assetQrToken === token)
     if (!item) {
       toast.error("QR code not found in this return")
       return

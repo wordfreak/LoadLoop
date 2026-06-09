@@ -12,6 +12,8 @@ import { eq, and } from "drizzle-orm"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Copy, ExternalLink } from "lucide-react"
 import { generateBookingLinks } from "@/features/bookings/links"
 import { CopyLinkButton } from "./copy-link-button"
 import { OwnerActions } from "./owner-actions"
@@ -164,14 +166,27 @@ export default async function BookingDetailPage({
       )}
 
       {booking.status !== "returned" && booking.status !== "cancelled" && (
-        <div className="flex flex-wrap gap-3">
-          {pickLink && (
-            <CopyLinkButton url={`${appUrl}/j/${pickLink.token}/pick`} label="Copy Pick Link" />
-          )}
-          {returnLink && (
-            <CopyLinkButton url={`${appUrl}/j/${returnLink.token}/return`} label="Copy Return Link" />
-          )}
-        </div>
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ExternalLink className="h-4 w-4 text-blue-600" />
+              Send to Staff
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Staff open these links on their phone — no login required. Send via WhatsApp, SMS, or email.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {pickLink && (
+                <CopyLinkButton url={`${appUrl}/j/${pickLink.token}/pick`} label="Copy Packing Link" />
+              )}
+              {returnLink && (
+                <CopyLinkButton url={`${appUrl}/j/${returnLink.token}/return`} label="Copy Return Link" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <OwnerActions
