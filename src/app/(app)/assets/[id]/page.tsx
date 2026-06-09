@@ -13,6 +13,7 @@ import { eq, and, desc, ne } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { notFound } from "next/navigation"
+import { OwnerAssetActions } from "@/features/assets/owner-asset-actions"
 
 const statusColors: Record<string, string> = {
   available: "bg-emerald-100 text-emerald-700",
@@ -224,8 +225,10 @@ export default async function AssetDetailPage({
                         <span className="text-sm text-muted-foreground">
                           ${Number(d.repairCost).toLocaleString()} repair
                         </span>
-                      )}
-                    </div>
+          )}
+
+          <OwnerAssetActions assetId={assetId} currentStatus={asset.status} />
+        </div>
                     {d.description && (
                       <p className="text-sm mt-2">{d.description}</p>
                     )}

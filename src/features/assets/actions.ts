@@ -7,7 +7,6 @@ import { getDatabase } from "@/lib/db"
 import { assets, assetMovements } from "@/lib/db/schema"
 import { eq, and } from "drizzle-orm"
 import { createAssetSchema, updateAssetSchema } from "./schemas"
-import { canTransition } from "./statuses"
 import type { AssetStatus, MovementType } from "./statuses"
 
 export async function createAsset(input: FormData | Record<string, unknown>) {
@@ -85,59 +84,4 @@ export async function updateAsset(
   revalidatePath("/assets")
   revalidatePath(`/assets/${id}`)
   return asset
-}
-
-export async function updateAssetStatus(
-  id: number,
-  newStatus: AssetStatus,
-  options?: {
-    movementType?: MovementType
-    performedBy?: string
-    notes?: string
-    bookingId?: number
-    locationId?: number
-    quantity?: number
-  }
-) {
-  const session = await auth()
-  if (!session?.user?.tenantId) throw new Error("Unauthorized")
-
-  const db = getDatabase()
-  const [asset] = await db
-    .select()
-    .from(assets)
-    .where(and(eq(assets.id, id), eq(assets.tenantId, session.user.tenantId)))
-    .limit(1)
-
-  if (!asset) throw new Error("Asset not found")
-
-  const currentStatus = asset.status as AssetStatus
-  if (!canTransition(currentStatus, newStatus)) {
-    throw new Error(
-      `Invalid status transition: ${currentStatus} → ${newStatus}`
-    )
-  }
-
-  const [updated] = await db
-    .update(assets)
-    .set({ status: newStatus, updatedAt: new Date() })
-    .where(and(eq(assets.id, id), eq(assets.tenantId, session.user.tenantId)))
-    .returning()
-
-  await db.insert(assetMovements).values({
-    tenantId: session.user.tenantId,
-    assetId: id,
-    bookingId: options?.bookingId ?? null,
-    locationId: options?.locationId ?? null,
-    movementType: options?.movementType ?? ("available" as MovementType),
-    fromStatus: currentStatus,
-    toStatus: newStatus,
-    quantity: options?.quantity ?? 1,
-    performedBy: options?.performedBy ?? session.user.name ?? session.user.email ?? "system",
-    notes: options?.notes ?? null,
-  })
-
-  revalidatePath("/assets")
-  revalidatePath(`/assets/${id}`)
-  return updated
 }

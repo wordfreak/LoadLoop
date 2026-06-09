@@ -3,6 +3,7 @@ import { getDatabase } from "@/lib/db"
 import { damageReports, assets, bookings } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { Badge } from "@/components/ui/badge"
+import { ResolveDamageButton } from "@/features/damage/resolve-button"
 
 const damageStatusColors: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -88,6 +89,7 @@ export default async function DamagePage() {
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
               <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+              <th className="px-4 py-3 text-left text-sm font-medium w-20">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -133,6 +135,11 @@ export default async function DamagePage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {new Date(r.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-2 py-3">
+                    {r.status === "pending" && (
+                      <ResolveDamageButton reportId={r.id} />
+                    )}
                   </td>
                 </tr>
               ))
