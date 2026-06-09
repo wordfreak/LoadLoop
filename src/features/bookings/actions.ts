@@ -82,6 +82,9 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
 
   if (!client) throw new Error("Client not found")
 
+  const requestedStart = parsed.startDate
+  const requestedEnd = parsed.returnDate ?? parsed.endDate
+
   if (parsed.items.length > 0) {
     const assetIds = parsed.items.map((i) => i.assetId)
     const tenantAssets = await db
@@ -163,9 +166,6 @@ export async function createBooking(input: FormData | Record<string, unknown>) {
       }
     }
   }
-
-  const requestedStart = parsed.startDate
-  const requestedEnd = parsed.returnDate ?? parsed.endDate
 
   const conflicts = await detectBookingConflicts(
     parsed.items.map((i) => i.assetId),
